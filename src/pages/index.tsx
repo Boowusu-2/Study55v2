@@ -276,7 +276,7 @@ Return ONLY valid JSON with this exact structure:
   return (
     <>
       <Head>
-        <title>SmartStudy - AI-Powered Quiz Generator</title>
+        <title>Study55 - AI-Powered Quiz Generator</title>
         <meta
           name="description"
           content="Transform your documents into interactive quizzes with AI"
@@ -298,7 +298,7 @@ Return ONLY valid JSON with this exact structure:
               <Brain className="w-10 h-10 text-white" />
             </div>
             <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
-              SmartStudy
+              Study55
             </h1>
             <p className="text-lg md:text-xl text-purple-100 max-w-2xl mx-auto leading-relaxed">
               Transform your documents into interactive quizzes powered by AI.
