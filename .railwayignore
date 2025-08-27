@@ -1,0 +1,22 @@
+# Exclude frontend files from Railway deployment
+src/
+public/
+node_modules/
+package.json
+package-lock.json
+next.config.ts
+tailwind.config.js
+postcss.config.mjs
+eslint.config.mjs
+tsconfig.json
+next-env.d.ts
+
+# Exclude development files
+.git/
+.gitignore
+README.md
+DEPLOYMENT.md
+env.example
+
+# Keep only backend files
+!backend/
