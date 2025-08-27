@@ -2,19 +2,20 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
-
 # Copy backend requirements first for better caching
 COPY backend/requirements.txt .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python dependencies with optimizations
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy backend application code
 COPY backend/ .
+
+# Create non-root user for security
+RUN adduser --disabled-password --gecos '' appuser && \
+    chown -R appuser:appuser /app
+USER appuser
 
 # Expose port
 EXPOSE 8000
