@@ -452,6 +452,30 @@ Return ONLY valid JSON with this exact structure:
                       <option value={20} className="text-gray-900">
                         20 Questions
                       </option>
+                      <option value={30} className="text-gray-900">
+                        30 Questions
+                      </option>
+                      <option value={40} className="text-gray-900">
+                        40 Questions
+                      </option>
+                      <option value={50} className="text-gray-900">
+                        50 Questions
+                      </option>
+                      <option value={60} className="text-gray-900">
+                        60 Questions
+                      </option>
+                      <option value={70} className="text-gray-900">
+                        70 Questions
+                      </option>
+                      <option value={80} className="text-gray-900">
+                        80 Questions
+                      </option>
+                      <option value={90} className="text-gray-900">
+                        90 Questions
+                      </option>
+                      <option value={100} className="text-gray-900">
+                        100 Questions
+                      </option>
                     </select>
                   </div>
 
