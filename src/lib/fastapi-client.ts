@@ -1,5 +1,5 @@
 // Configuration for the FastAPI backend
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://study55v2-production-09c8.up.railway.app";
 
 export interface ExtractTextResponse {
   text: string;
