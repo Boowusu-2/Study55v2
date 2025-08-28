@@ -13,11 +13,15 @@ import {
   Star,
   ArrowRight,
   ArrowLeft,
+  User,
 } from "lucide-react";
 import { QuizQuestion, QuizSettings } from "@/types";
 import { callGeminiAPIWithSplitting } from "@/lib/api";
 import { extractTextFromFiles } from "@/lib/fastapi-client";
 import { formatFileSize } from "@/utils/helpers";
+import { useAuth } from "@/contexts/AuthContext";
+import UserProfile from "@/components/UserProfile";
+import Link from "next/link";
 
 interface SmartStudyState {
   uploadedFiles: File[];
@@ -34,9 +38,13 @@ interface SmartStudyState {
   autoAdvancing: boolean;
   isGeneratingMore: boolean;
   targetQuestionCount: number;
+  isCancelling: boolean;
 }
 
 export default function SmartStudy(): JSX.Element {
+  const { user, isAuthenticated } = useAuth();
+  const [showUserProfile, setShowUserProfile] = useState(false);
+  
   const [state, setState] = useState<SmartStudyState>({
     uploadedFiles: [],
     currentQuiz: null,
@@ -51,6 +59,7 @@ export default function SmartStudy(): JSX.Element {
     autoAdvancing: false,
     isGeneratingMore: false,
     targetQuestionCount: 0,
+    isCancelling: false,
     quizSettings: {
       questionCount: 10,
       difficulty: "medium",
@@ -60,36 +69,45 @@ export default function SmartStudy(): JSX.Element {
     },
   });
 
+  // Ref to track cancellation
+  const cancellationRef = useRef<{ cancelled: boolean }>({ cancelled: false });
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // File upload handling
-  const addFiles = useCallback((files: File[]): void => {
-    const validTypes = [".pdf", ".doc", ".docx", ".txt", ".ppt", ".pptx"];
-    const newFiles = files.filter((file) => {
-      const extension = "." + file.name.split(".").pop()?.toLowerCase();
-      return (
-        validTypes.includes(extension) &&
-        !state.uploadedFiles.find((f) => f.name === file.name)
-      );
-    });
+  const addFiles = useCallback(
+    (files: File[]): void => {
+      const validTypes = [".pdf", ".doc", ".docx", ".txt", ".ppt", ".pptx"];
+      const newFiles = files.filter((file) => {
+        const extension = "." + file.name.split(".").pop()?.toLowerCase();
+        return (
+          validTypes.includes(extension) &&
+          !state.uploadedFiles.find((f) => f.name === file.name)
+        );
+      });
 
-    setState((prev) => ({
-      ...prev,
-      uploadedFiles: [...prev.uploadedFiles, ...newFiles],
-    }));
-  }, [state.uploadedFiles]);
+      setState((prev) => ({
+        ...prev,
+        uploadedFiles: [...prev.uploadedFiles, ...newFiles],
+      }));
+    },
+    [state.uploadedFiles]
+  );
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const files = Array.from(e.target.files || []);
     addFiles(files);
   };
 
-  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>): void => {
-    e.preventDefault();
-    e.currentTarget.classList.remove("border-blue-400", "bg-blue-50");
-    const files = Array.from(e.dataTransfer.files);
-    addFiles(files);
-  }, [addFiles]);
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>): void => {
+      e.preventDefault();
+      e.currentTarget.classList.remove("border-blue-400", "bg-blue-50");
+      const files = Array.from(e.dataTransfer.files);
+      addFiles(files);
+    },
+    [addFiles]
+  );
 
   const handleDragOver = useCallback(
     (e: React.DragEvent<HTMLDivElement>): void => {
@@ -165,10 +183,15 @@ export default function SmartStudy(): JSX.Element {
         loadingMessage: "Starting quiz generation...",
       }));
 
-      // Initialize with first batch
+      // Initialize with first batch - use half of requested questions or 8, whichever is smaller
+      const initialBatchSize = Math.min(
+        Math.max(8, Math.floor(state.quizSettings.questionCount / 2)),
+        state.quizSettings.questionCount
+      );
+
       const initialQuizData = await callGeminiAPIWithSplitting(
         combinedContent,
-        Math.min(8, state.quizSettings.questionCount), // Start with first 8 questions
+        initialBatchSize,
         state.quizSettings.difficulty,
         state.quizSettings.questionType,
         state.quizSettings.focusArea,
@@ -191,13 +214,25 @@ export default function SmartStudy(): JSX.Element {
         selectedAnswer: null,
         showResult: false,
         quizComplete: false,
-        loadingMessage: "Quiz ready! Generating more questions in background...",
+        loadingMessage:
+          "Quiz ready! Generating more questions in background...",
       }));
 
       // Generate remaining questions in background
-      if (state.quizSettings.questionCount > 8) {
+      console.log(
+        `Initial batch generated: ${initialQuizData.questions.length} questions`
+      );
+      console.log(`Target question count: ${state.quizSettings.questionCount}`);
+
+      if (state.quizSettings.questionCount > initialQuizData.questions.length) {
+        console.log(
+          `Generating remaining ${
+            state.quizSettings.questionCount - initialQuizData.questions.length
+          } questions`
+        );
         generateRemainingQuestions(combinedContent);
       } else {
+        console.log("No remaining questions to generate");
         setState((prev) => ({
           ...prev,
           isGeneratingMore: false,
@@ -225,13 +260,18 @@ export default function SmartStudy(): JSX.Element {
 
     setTimeout(() => {
       setState((prev) => ({ ...prev, showResult: true }));
-      
+
       // Check if answer is correct and auto-advance after showing result
-      const currentQuestion = state.currentQuiz?.questions[state.currentQuestionIndex];
-      if (currentQuestion && optionIndex === currentQuestion.correct && !state.autoAdvancing) {
+      const currentQuestion =
+        state.currentQuiz?.questions[state.currentQuestionIndex];
+      if (
+        currentQuestion &&
+        optionIndex === currentQuestion.correct &&
+        !state.autoAdvancing
+      ) {
         // Set auto-advancing flag to prevent multiple calls
         setState((prev) => ({ ...prev, autoAdvancing: true }));
-        
+
         // Auto-advance to next question after 2 seconds for correct answers
         setTimeout(() => {
           nextQuestion();
@@ -299,11 +339,52 @@ export default function SmartStudy(): JSX.Element {
     setState((prev) => ({ ...prev, quizComplete: true }));
   };
 
+  const cancelGeneration = (): void => {
+    cancellationRef.current.cancelled = true;
+    setState((prev) => ({
+      ...prev,
+      isGeneratingMore: false,
+      isCancelling: true,
+      loadingMessage: "Cancelling generation...",
+    }));
+
+    // Clear the cancellation state after a brief delay
+    setTimeout(() => {
+      setState((prev) => ({
+        ...prev,
+        isCancelling: false,
+        loadingMessage:
+          "Generation cancelled. You can continue with the current questions.",
+      }));
+
+      // Clear the message after 3 seconds
+      setTimeout(() => {
+        setState((prev) => ({
+          ...prev,
+          loadingMessage: "",
+        }));
+      }, 3000);
+    }, 1000);
+  };
+
   const generateRemainingQuestions = async (content: string): Promise<void> => {
     try {
-      const remainingCount = state.targetQuestionCount - (state.currentQuiz?.questions.length || 0);
-      
+      // Reset cancellation flag
+      cancellationRef.current.cancelled = false;
+
+      const remainingCount =
+        state.targetQuestionCount - (state.currentQuiz?.questions.length || 0);
+
+      console.log(
+        `generateRemainingQuestions called with remainingCount: ${remainingCount}`
+      );
+      console.log(
+        `Current quiz questions: ${state.currentQuiz?.questions.length || 0}`
+      );
+      console.log(`Target question count: ${state.targetQuestionCount}`);
+
       if (remainingCount <= 0) {
+        console.log("No remaining questions to generate");
         setState((prev) => ({
           ...prev,
           isGeneratingMore: false,
@@ -321,6 +402,11 @@ export default function SmartStudy(): JSX.Element {
         state.apiKey,
         state.quizSettings.model,
         (message, current, total) => {
+          // Check if generation was cancelled
+          if (cancellationRef.current.cancelled) {
+            throw new Error("Generation cancelled by user");
+          }
+
           setState((prev) => ({
             ...prev,
             loadingMessage: `Generating more questions: ${message} (${current}/${total})`,
@@ -328,11 +414,22 @@ export default function SmartStudy(): JSX.Element {
         }
       );
 
+      // Check if generation was cancelled before processing results
+      if (cancellationRef.current.cancelled) {
+        return;
+      }
+
       // Merge new questions with existing ones
       if (state.currentQuiz && additionalQuizData.questions.length > 0) {
-        const allQuestions = [...state.currentQuiz.questions, ...additionalQuizData.questions];
-        const allAnswers = [...state.userAnswers, ...new Array(additionalQuizData.questions.length).fill(null)];
-        
+        const allQuestions = [
+          ...state.currentQuiz.questions,
+          ...additionalQuizData.questions,
+        ];
+        const allAnswers = [
+          ...state.userAnswers,
+          ...new Array(additionalQuizData.questions.length).fill(null),
+        ];
+
         setState((prev) => ({
           ...prev,
           currentQuiz: { questions: allQuestions },
@@ -350,6 +447,14 @@ export default function SmartStudy(): JSX.Element {
         }, 3000);
       }
     } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message === "Generation cancelled by user"
+      ) {
+        // Generation was cancelled, don't show error
+        return;
+      }
+
       console.error("Error generating remaining questions:", error);
       setState((prev) => ({
         ...prev,
@@ -360,6 +465,9 @@ export default function SmartStudy(): JSX.Element {
   };
 
   const resetQuiz = (): void => {
+    // Cancel any ongoing generation
+    cancellationRef.current.cancelled = true;
+
     setState((prev) => ({
       ...prev,
       currentQuiz: null,
@@ -371,6 +479,8 @@ export default function SmartStudy(): JSX.Element {
       autoAdvancing: false,
       isGeneratingMore: false,
       targetQuestionCount: 0,
+      isCancelling: false,
+      loadingMessage: "",
     }));
   };
 
@@ -397,17 +507,55 @@ export default function SmartStudy(): JSX.Element {
 
         <div className="relative z-10 container mx-auto px-4 py-8 max-w-6xl">
           {/* Header */}
-          <header className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full mb-6 animate-bounce">
-              <Brain className="w-10 h-10 text-white" />
+          <header className="flex items-center justify-between mb-12">
+            <div className="text-center flex-1">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full mb-6 animate-bounce">
+                <Brain className="w-10 h-10 text-white" />
+              </div>
+              <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
+                Study55
+              </h1>
+              <p className="text-lg md:text-xl text-purple-100 max-w-2xl mx-auto leading-relaxed">
+                Transform your documents into interactive quizzes powered by AI.
+                Upload, configure, and start learning smarter.
+              </p>
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
-              Study55
-            </h1>
-            <p className="text-lg md:text-xl text-purple-100 max-w-2xl mx-auto leading-relaxed">
-              Transform your documents into interactive quizzes powered by AI.
-              Upload, configure, and start learning smarter.
-            </p>
+
+            {/* User Menu */}
+            <div className="flex items-center gap-4">
+              {isAuthenticated ? (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowUserProfile(true)}
+                    className="flex items-center gap-3 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 hover:bg-white/20 transition-all duration-200"
+                  >
+                    <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
+                      {user?.avatar ? (
+                        <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="w-4 h-4 text-white" />
+                      )}
+                    </div>
+                    <span className="text-white font-medium hidden sm:block">{user?.name}</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <Link
+                    href="/auth"
+                    className="px-4 py-2 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 text-white hover:bg-white/20 transition-all duration-200"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/auth"
+                    className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-200"
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              )}
+            </div>
           </header>
 
           {!state.currentQuiz ? (
@@ -714,9 +862,14 @@ export default function SmartStudy(): JSX.Element {
                     </h2>
                     <p className="text-purple-200">
                       of {state.currentQuiz.questions.length}
-                      {state.isGeneratingMore && state.targetQuestionCount > state.currentQuiz.questions.length && (
-                        <span className="text-yellow-300"> (target: {state.targetQuestionCount})</span>
-                      )}
+                      {state.isGeneratingMore &&
+                        state.targetQuestionCount >
+                          state.currentQuiz.questions.length && (
+                          <span className="text-yellow-300">
+                            {" "}
+                            (target: {state.targetQuestionCount})
+                          </span>
+                        )}
                     </p>
                   </div>
                 </div>
@@ -750,14 +903,25 @@ export default function SmartStudy(): JSX.Element {
               {/* Progressive Loading Indicator */}
               {state.isGeneratingMore && (
                 <div className="mb-6 p-3 bg-yellow-500/20 border border-yellow-400/50 rounded-lg">
-                  <div className="flex items-center gap-2 text-yellow-200">
-                    <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
-                    <span className="text-sm font-medium">
-                      {state.loadingMessage || "Generating more questions in background..."}
-                    </span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-yellow-200">
+                      <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                      <span className="text-sm font-medium">
+                        {state.loadingMessage ||
+                          "Generating more questions in background..."}
+                      </span>
+                    </div>
+                    <button
+                      onClick={cancelGeneration}
+                      disabled={state.isCancelling}
+                      className="px-3 py-1 bg-red-500/20 border border-red-400/50 text-red-200 text-xs rounded-lg hover:bg-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {state.isCancelling ? "Cancelling..." : "Cancel"}
+                    </button>
                   </div>
                   <div className="mt-2 text-xs text-yellow-100">
-                    You can continue with the current questions while more are being generated
+                    You can continue with the current questions while more are
+                    being generated
                   </div>
                 </div>
               )}
@@ -991,6 +1155,12 @@ export default function SmartStudy(): JSX.Element {
           )}
         </div>
       </div>
+
+      {/* User Profile Modal */}
+      <UserProfile 
+        isOpen={showUserProfile} 
+        onClose={() => setShowUserProfile(false)} 
+      />
     </>
   );
 }
