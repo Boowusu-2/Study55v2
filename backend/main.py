@@ -12,10 +12,10 @@ from extract_text import extract_text_from_files
 app = FastAPI(
     title="SmartStudy Text Extraction API",
     description="API for extracting text from various document formats",
-    version="1.0.0"
+    version="1.0.1"  # Updated version to force redeploy
 )
 
-# Configure CORS
+# Configure CORS - Updated for Vercel deployment
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
