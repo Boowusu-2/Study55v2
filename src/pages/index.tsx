@@ -15,7 +15,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { QuizQuestion, QuizSettings, GeminiResponse } from "@/types";
-import { callGeminiAPI, createFallbackQuiz } from "@/lib/api";
+import { callGeminiAPIWithSplitting, createFallbackQuiz } from "@/lib/api";
 import { extractTextFromFiles } from "@/lib/fastapi-client";
 import { formatFileSize } from "@/utils/helpers";
 
@@ -25,6 +25,7 @@ interface SmartStudyState {
   currentQuestionIndex: number;
   userAnswers: (number | null)[];
   isLoading: boolean;
+  loadingMessage: string;
   apiKey: string;
   selectedAnswer: number | null;
   showResult: boolean;
@@ -39,6 +40,7 @@ export default function SmartStudy(): JSX.Element {
     currentQuestionIndex: 0,
     userAnswers: [],
     isLoading: false,
+    loadingMessage: "",
     apiKey: "",
     selectedAnswer: null,
     showResult: false,
@@ -48,6 +50,7 @@ export default function SmartStudy(): JSX.Element {
       difficulty: "medium",
       questionType: "multiple_choice",
       focusArea: "",
+      model: "auto",
     },
   });
 
@@ -133,36 +136,22 @@ export default function SmartStudy(): JSX.Element {
       return;
     }
 
-    setState((prev) => ({ ...prev, isLoading: true }));
+    setState((prev) => ({ ...prev, isLoading: true, loadingMessage: "Extracting text from documents..." }));
 
     try {
       const combinedContent = await extractTextFromServer(state.uploadedFiles);
 
-      const prompt = `Create ${state.quizSettings.questionCount} ${
-        state.quizSettings.difficulty
-      } ${
-        state.quizSettings.questionType
-      } quiz questions based on this content. ${
-        state.quizSettings.focusArea
-          ? `Focus on: ${state.quizSettings.focusArea}`
-          : ""
-      }
+      setState((prev) => ({ ...prev, loadingMessage: "Generating quiz questions..." }));
 
-Content: ${combinedContent}
-
-Return ONLY valid JSON with this exact structure:
-{
-  "questions": [
-    {
-      "question": "Question text",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
-      "correct": 0,
-      "explanation": "Detailed explanation"
-    }
-  ]
-}`;
-
-      const quizData = await callGeminiAPI(prompt, state.apiKey);
+      const quizData = await callGeminiAPIWithSplitting(
+        combinedContent,
+        state.quizSettings.questionCount,
+        state.quizSettings.difficulty,
+        state.quizSettings.questionType,
+        state.quizSettings.focusArea,
+        state.apiKey,
+        state.quizSettings.model
+      );
 
       setState((prev) => ({
         ...prev,
@@ -173,11 +162,12 @@ Return ONLY valid JSON with this exact structure:
         showResult: false,
         quizComplete: false,
         isLoading: false,
+        loadingMessage: "",
       }));
     } catch (error) {
       console.error("Quiz generation error:", error);
       alert("Error generating quiz. Please try again.");
-      setState((prev) => ({ ...prev, isLoading: false }));
+      setState((prev) => ({ ...prev, isLoading: false, loadingMessage: "" }));
     }
   };
 
@@ -576,9 +566,16 @@ Return ONLY valid JSON with this exact structure:
                   aria-label="Generate quiz from uploaded documents"
                 >
                   {state.isLoading ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Generating...
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Generating...
+                      </div>
+                      {state.loadingMessage && (
+                        <div className="text-sm text-purple-200 mt-1">
+                          {state.loadingMessage}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="flex items-center justify-center gap-2">

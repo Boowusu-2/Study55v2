@@ -18,7 +18,13 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure this properly for production
+    allow_origins=[
+        "https://study55v2.vercel.app",
+        "https://study55v2-git-main-bismark.vercel.app",
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "*"  # Keep wildcard for development
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
