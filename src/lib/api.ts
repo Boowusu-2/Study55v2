@@ -196,6 +196,24 @@ export async function callGeminiAPI(
   return tryGeminiModels(prompt, apiKey, selectedModel, retryCount);
 }
 
+// Helper function to chunk content for diverse questions
+function chunkContent(content: string, batchNumber: number, totalBatches: number): string {
+  const contentLength = content.length;
+  const chunkSize = Math.floor(contentLength / totalBatches);
+  const startIndex = (batchNumber - 1) * chunkSize;
+  const endIndex = batchNumber === totalBatches ? contentLength : startIndex + chunkSize;
+  
+  // Add some overlap to ensure context continuity
+  const overlap = Math.floor(chunkSize * 0.1); // 10% overlap
+  const actualStart = Math.max(0, startIndex - overlap);
+  const actualEnd = Math.min(contentLength, endIndex + overlap);
+  
+  const chunk = content.substring(actualStart, actualEnd);
+  
+  // Add context about which part of the document this is
+  return `[Section ${batchNumber} of ${totalBatches}] ${chunk}`;
+}
+
 // New function to handle large question counts by splitting requests
 export async function callGeminiAPIWithSplitting(
   content: string,
@@ -246,13 +264,16 @@ export async function callGeminiAPIWithSplitting(
       questionCount
     );
 
+    // Get a different chunk of content for each batch to ensure diversity
+    const contentChunk = chunkContent(content, batchNumber, batches);
+
     let retryCount = 0;
     const maxRetries = 3;
 
     while (retryCount < maxRetries) {
       try {
         const batchQuiz = await callGeminiAPIWithPrompt(
-          content,
+          contentChunk,
           currentBatchSize,
           difficulty,
           questionType,
@@ -310,12 +331,15 @@ export async function callGeminiAPIWithSplitting(
     }
   }
 
-  const finalQuestions = allQuestions.slice(0, questionCount);
+  // Deduplicate questions to ensure no repeats
+  const uniqueQuestions = deduplicateQuestions(allQuestions);
+  const finalQuestions = uniqueQuestions.slice(0, questionCount);
+  
   console.log(
-    `Total questions generated: ${finalQuestions.length}/${questionCount}`
+    `Total questions generated: ${finalQuestions.length}/${questionCount} (${allQuestions.length - uniqueQuestions.length} duplicates removed)`
   );
   onProgress?.(
-    `Quiz generation complete! Created ${finalQuestions.length} questions.`,
+    `Quiz generation complete! Created ${finalQuestions.length} unique questions.`,
     finalQuestions.length,
     questionCount
   );
@@ -347,11 +371,18 @@ function callGeminiAPIWithPrompt(
     focusArea ? `Focus specifically on: ${focusArea}` : ""
   }
 
+CRITICAL REQUIREMENTS:
+1. Each question must be UNIQUE and cover DIFFERENT aspects of the content
+2. Avoid repetitive questions or similar topics
+3. Vary the question types and difficulty within the specified range
+4. Cover different sections, concepts, and details from the provided content
+5. Ensure all answer options are plausible and well-distributed
+
 IMPORTANT: Return ONLY valid JSON with this exact structure, no additional text:
 {
   "questions": [
     {
-      "question": "Clear, specific question text",
+      "question": "Clear, specific question text covering unique content",
       "options": ["Option A", "Option B", "Option C", "Option D"],
       "correct": 0,
       "explanation": "Brief but detailed explanation of why this is correct"
@@ -403,6 +434,27 @@ export function createFallbackQuiz(): QuizData {
   };
 }
 
+// Helper function to deduplicate questions
+function deduplicateQuestions(questions: QuizQuestion[]): QuizQuestion[] {
+  const seen = new Set<string>();
+  const unique: QuizQuestion[] = [];
+  
+  for (const question of questions) {
+    // Create a normalized version of the question for comparison
+    const normalized = question.question.toLowerCase()
+      .replace(/[^\w\s]/g, '') // Remove punctuation
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim();
+    
+    if (!seen.has(normalized)) {
+      seen.add(normalized);
+      unique.push(question);
+    }
+  }
+  
+  return unique;
+}
+
 // Helper function to create fallback questions for failed batches
 function createFallbackQuestionsForBatch(
   count: number
@@ -451,6 +503,36 @@ function createFallbackQuestionsForBatch(
       ],
       correct: 3,
       explanation: "The document covers multiple aspects that work together.",
+    },
+    {
+      question: "What methodology is described in the document?",
+      options: ["Method A", "Method B", "Method C", "Method D"],
+      correct: 0,
+      explanation: "The document outlines Method A as the primary methodology.",
+    },
+    {
+      question: "Which factor is identified as crucial for success?",
+      options: ["Factor A", "Factor B", "Factor C", "Factor D"],
+      correct: 1,
+      explanation: "Factor B is highlighted as essential for achieving success.",
+    },
+    {
+      question: "What challenge is mentioned in the material?",
+      options: ["Challenge A", "Challenge B", "Challenge C", "Challenge D"],
+      correct: 2,
+      explanation: "The document identifies Challenge C as a significant obstacle.",
+    },
+    {
+      question: "Which outcome is expected from following the guidelines?",
+      options: ["Outcome A", "Outcome B", "Outcome C", "Outcome D"],
+      correct: 3,
+      explanation: "Outcome D represents the expected result of following the guidelines.",
+    },
+    {
+      question: "What principle underlies the main concepts?",
+      options: ["Principle A", "Principle B", "Principle C", "Principle D"],
+      correct: 0,
+      explanation: "Principle A forms the foundation of the main concepts discussed.",
     },
   ];
 
