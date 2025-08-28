@@ -1,4 +1,4 @@
-import { QuizData, GeminiResponse } from "@/types";
+import { QuizData, GeminiResponse, QuizQuestion } from "@/types";
 
 // Retry configuration
 const MAX_RETRIES = 3;
@@ -85,10 +85,18 @@ async function tryGeminiModels(
   return createFallbackQuiz();
 }
 
+interface GeminiModel {
+  name: string;
+  url: string;
+  maxTokens: number;
+  temperature: number;
+  priority: number;
+}
+
 async function callGeminiAPIWithModel(
   prompt: string,
   apiKey: string,
-  model: any,
+  model: GeminiModel,
   retryCount: number = 0
 ): Promise<QuizData | null> {
   const url = `${model.url}?key=${apiKey}`;
@@ -223,7 +231,7 @@ export async function callGeminiAPIWithSplitting(
 
   const batchSize = 5; // Reduced batch size for better reliability
   const batches = Math.ceil(questionCount / batchSize);
-  const allQuestions: any[] = [];
+  const allQuestions: QuizQuestion[] = [];
 
   for (let i = 0; i < batches; i++) {
     const currentBatchSize = Math.min(batchSize, questionCount - i * batchSize);
@@ -284,9 +292,7 @@ export async function callGeminiAPIWithSplitting(
           );
           // Create fallback questions for this batch
           const fallbackQuestions = createFallbackQuestionsForBatch(
-            currentBatchSize,
-            difficulty,
-            questionType
+            currentBatchSize
           );
           allQuestions.push(...fallbackQuestions);
         } else {
@@ -399,11 +405,9 @@ export function createFallbackQuiz(): QuizData {
 
 // Helper function to create fallback questions for failed batches
 function createFallbackQuestionsForBatch(
-  count: number,
-  difficulty: string,
-  questionType: string
-): any[] {
-  const questions = [];
+  count: number
+): QuizQuestion[] {
+  const questions: QuizQuestion[] = [];
   const baseQuestions = [
     {
       question: "What is the main topic discussed in the document?",

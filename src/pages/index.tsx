@@ -14,8 +14,8 @@ import {
   ArrowRight,
   ArrowLeft,
 } from "lucide-react";
-import { QuizQuestion, QuizSettings, GeminiResponse } from "@/types";
-import { callGeminiAPIWithSplitting, createFallbackQuiz } from "@/lib/api";
+import { QuizQuestion, QuizSettings } from "@/types";
+import { callGeminiAPIWithSplitting } from "@/lib/api";
 import { extractTextFromFiles } from "@/lib/fastapi-client";
 import { formatFileSize } from "@/utils/helpers";
 
@@ -57,6 +57,22 @@ export default function SmartStudy(): JSX.Element {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // File upload handling
+  const addFiles = useCallback((files: File[]): void => {
+    const validTypes = [".pdf", ".doc", ".docx", ".txt", ".ppt", ".pptx"];
+    const newFiles = files.filter((file) => {
+      const extension = "." + file.name.split(".").pop()?.toLowerCase();
+      return (
+        validTypes.includes(extension) &&
+        !state.uploadedFiles.find((f) => f.name === file.name)
+      );
+    });
+
+    setState((prev) => ({
+      ...prev,
+      uploadedFiles: [...prev.uploadedFiles, ...newFiles],
+    }));
+  }, [state.uploadedFiles]);
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const files = Array.from(e.target.files || []);
     addFiles(files);
@@ -67,7 +83,7 @@ export default function SmartStudy(): JSX.Element {
     e.currentTarget.classList.remove("border-blue-400", "bg-blue-50");
     const files = Array.from(e.dataTransfer.files);
     addFiles(files);
-  }, []);
+  }, [addFiles]);
 
   const handleDragOver = useCallback(
     (e: React.DragEvent<HTMLDivElement>): void => {
@@ -84,22 +100,6 @@ export default function SmartStudy(): JSX.Element {
     },
     []
   );
-
-  const addFiles = (files: File[]): void => {
-    const validTypes = [".pdf", ".doc", ".docx", ".txt", ".ppt", ".pptx"];
-    const newFiles = files.filter((file) => {
-      const extension = "." + file.name.split(".").pop()?.toLowerCase();
-      return (
-        validTypes.includes(extension) &&
-        !state.uploadedFiles.find((f) => f.name === file.name)
-      );
-    });
-
-    setState((prev) => ({
-      ...prev,
-      uploadedFiles: [...prev.uploadedFiles, ...newFiles],
-    }));
-  };
 
   const removeFile = (index: number): void => {
     setState((prev) => ({
@@ -248,15 +248,13 @@ export default function SmartStudy(): JSX.Element {
   const showFinalResults = (): void => {
     if (!state.currentQuiz) return;
 
-    const correct = state.userAnswers.reduce((count: number, answer, index) => {
+    // Calculate correct answers for summary
+    state.userAnswers.reduce((count: number, answer, index) => {
       return (
         count + (answer === state.currentQuiz!.questions[index].correct ? 1 : 0)
       );
     }, 0);
 
-    const percentage = Math.round(
-      (correct / state.currentQuiz.questions.length) * 100
-    );
     // show summary in UI
     setState((prev) => ({ ...prev, quizComplete: true }));
   };
