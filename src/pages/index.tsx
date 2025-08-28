@@ -32,6 +32,8 @@ interface SmartStudyState {
   quizSettings: QuizSettings;
   quizComplete: boolean;
   autoAdvancing: boolean;
+  isGeneratingMore: boolean;
+  targetQuestionCount: number;
 }
 
 export default function SmartStudy(): JSX.Element {
@@ -47,6 +49,8 @@ export default function SmartStudy(): JSX.Element {
     showResult: false,
     quizComplete: false,
     autoAdvancing: false,
+    isGeneratingMore: false,
+    targetQuestionCount: 0,
     quizSettings: {
       questionCount: 10,
       difficulty: "medium",
@@ -152,9 +156,19 @@ export default function SmartStudy(): JSX.Element {
         loadingMessage: "Generating quiz questions...",
       }));
 
-      const quizData = await callGeminiAPIWithSplitting(
+      // Start progressive loading
+      setState((prev) => ({
+        ...prev,
+        targetQuestionCount: state.quizSettings.questionCount,
+        isLoading: false,
+        isGeneratingMore: true,
+        loadingMessage: "Starting quiz generation...",
+      }));
+
+      // Initialize with first batch
+      const initialQuizData = await callGeminiAPIWithSplitting(
         combinedContent,
-        state.quizSettings.questionCount,
+        Math.min(8, state.quizSettings.questionCount), // Start with first 8 questions
         state.quizSettings.difficulty,
         state.quizSettings.questionType,
         state.quizSettings.focusArea,
@@ -168,17 +182,28 @@ export default function SmartStudy(): JSX.Element {
         }
       );
 
+      // Start the quiz with initial questions
       setState((prev) => ({
         ...prev,
-        currentQuiz: quizData,
-        userAnswers: new Array(quizData.questions.length).fill(null),
+        currentQuiz: initialQuizData,
+        userAnswers: new Array(initialQuizData.questions.length).fill(null),
         currentQuestionIndex: 0,
         selectedAnswer: null,
         showResult: false,
         quizComplete: false,
-        isLoading: false,
-        loadingMessage: "",
+        loadingMessage: "Quiz ready! Generating more questions in background...",
       }));
+
+      // Generate remaining questions in background
+      if (state.quizSettings.questionCount > 8) {
+        generateRemainingQuestions(combinedContent);
+      } else {
+        setState((prev) => ({
+          ...prev,
+          isGeneratingMore: false,
+          loadingMessage: "",
+        }));
+      }
     } catch (error) {
       console.error("Quiz generation error:", error);
       alert("Error generating quiz. Please try again.");
@@ -274,6 +299,66 @@ export default function SmartStudy(): JSX.Element {
     setState((prev) => ({ ...prev, quizComplete: true }));
   };
 
+  const generateRemainingQuestions = async (content: string): Promise<void> => {
+    try {
+      const remainingCount = state.targetQuestionCount - (state.currentQuiz?.questions.length || 0);
+      
+      if (remainingCount <= 0) {
+        setState((prev) => ({
+          ...prev,
+          isGeneratingMore: false,
+          loadingMessage: "",
+        }));
+        return;
+      }
+
+      const additionalQuizData = await callGeminiAPIWithSplitting(
+        content,
+        remainingCount,
+        state.quizSettings.difficulty,
+        state.quizSettings.questionType,
+        state.quizSettings.focusArea,
+        state.apiKey,
+        state.quizSettings.model,
+        (message, current, total) => {
+          setState((prev) => ({
+            ...prev,
+            loadingMessage: `Generating more questions: ${message} (${current}/${total})`,
+          }));
+        }
+      );
+
+      // Merge new questions with existing ones
+      if (state.currentQuiz && additionalQuizData.questions.length > 0) {
+        const allQuestions = [...state.currentQuiz.questions, ...additionalQuizData.questions];
+        const allAnswers = [...state.userAnswers, ...new Array(additionalQuizData.questions.length).fill(null)];
+        
+        setState((prev) => ({
+          ...prev,
+          currentQuiz: { questions: allQuestions },
+          userAnswers: allAnswers,
+          isGeneratingMore: false,
+          loadingMessage: `Added ${additionalQuizData.questions.length} more questions!`,
+        }));
+
+        // Clear the success message after 3 seconds
+        setTimeout(() => {
+          setState((prev) => ({
+            ...prev,
+            loadingMessage: "",
+          }));
+        }, 3000);
+      }
+    } catch (error) {
+      console.error("Error generating remaining questions:", error);
+      setState((prev) => ({
+        ...prev,
+        isGeneratingMore: false,
+        loadingMessage: "Finished generating questions.",
+      }));
+    }
+  };
+
   const resetQuiz = (): void => {
     setState((prev) => ({
       ...prev,
@@ -284,6 +369,8 @@ export default function SmartStudy(): JSX.Element {
       showResult: false,
       quizComplete: false,
       autoAdvancing: false,
+      isGeneratingMore: false,
+      targetQuestionCount: 0,
     }));
   };
 
@@ -627,6 +714,9 @@ export default function SmartStudy(): JSX.Element {
                     </h2>
                     <p className="text-purple-200">
                       of {state.currentQuiz.questions.length}
+                      {state.isGeneratingMore && state.targetQuestionCount > state.currentQuiz.questions.length && (
+                        <span className="text-yellow-300"> (target: {state.targetQuestionCount})</span>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -641,7 +731,7 @@ export default function SmartStudy(): JSX.Element {
               </div>
 
               {/* Progress Bar */}
-              <div className="w-full bg-white/20 rounded-full h-3 mb-8">
+              <div className="w-full bg-white/20 rounded-full h-3 mb-4">
                 <div
                   className="bg-gradient-to-r from-purple-400 to-pink-400 h-3 rounded-full transition-all duration-500"
                   style={{
@@ -656,6 +746,21 @@ export default function SmartStudy(): JSX.Element {
                   aria-valuemax={state.currentQuiz.questions.length}
                 />
               </div>
+
+              {/* Progressive Loading Indicator */}
+              {state.isGeneratingMore && (
+                <div className="mb-6 p-3 bg-yellow-500/20 border border-yellow-400/50 rounded-lg">
+                  <div className="flex items-center gap-2 text-yellow-200">
+                    <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                    <span className="text-sm font-medium">
+                      {state.loadingMessage || "Generating more questions in background..."}
+                    </span>
+                  </div>
+                  <div className="mt-2 text-xs text-yellow-100">
+                    You can continue with the current questions while more are being generated
+                  </div>
+                </div>
+              )}
 
               {/* Question */}
               {currentQuestion && (
