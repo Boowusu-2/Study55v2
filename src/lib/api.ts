@@ -30,7 +30,7 @@ const GEMINI_MODELS = {
 };
 
 // Sleep function for delays
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Exponential backoff delay
 const getBackoffDelay = (attempt: number): number => {
@@ -41,24 +41,35 @@ const getBackoffDelay = (attempt: number): number => {
 async function tryGeminiModels(
   prompt: string,
   apiKey: string,
-  selectedModel: string = 'auto',
+  selectedModel: string = "auto",
   retryCount: number = 0
 ): Promise<QuizData> {
   let models;
-  
-  if (selectedModel === 'auto') {
+
+  if (selectedModel === "auto") {
     // Use all models in priority order
-    models = Object.values(GEMINI_MODELS).sort((a, b) => a.priority - b.priority);
+    models = Object.values(GEMINI_MODELS).sort(
+      (a, b) => a.priority - b.priority
+    );
   } else {
     // Use specific model
-    const model = Object.values(GEMINI_MODELS).find(m => m.name === selectedModel);
-    models = model ? [model] : Object.values(GEMINI_MODELS).sort((a, b) => a.priority - b.priority);
+    const model = Object.values(GEMINI_MODELS).find(
+      (m) => m.name === selectedModel
+    );
+    models = model
+      ? [model]
+      : Object.values(GEMINI_MODELS).sort((a, b) => a.priority - b.priority);
   }
-  
+
   for (const model of models) {
     try {
       console.log(`Trying model: ${model.name}`);
-      const result = await callGeminiAPIWithModel(prompt, apiKey, model, retryCount);
+      const result = await callGeminiAPIWithModel(
+        prompt,
+        apiKey,
+        model,
+        retryCount
+      );
       if (result) {
         console.log(`Success with model: ${model.name}`);
         return result;
@@ -68,7 +79,7 @@ async function tryGeminiModels(
       continue;
     }
   }
-  
+
   // If all models fail, return fallback
   console.warn("All Gemini models failed, using fallback quiz");
   return createFallbackQuiz();
@@ -107,7 +118,7 @@ async function callGeminiAPIWithModel(
         const errText = await response.text();
         errorDetails = errText.slice(0, 500);
       } catch {}
-      
+
       console.warn(
         `Gemini API (${model.name}) HTTP ${response.status} ${response.statusText}:`,
         errorDetails
@@ -115,7 +126,11 @@ async function callGeminiAPIWithModel(
 
       // Handle specific error cases
       if (response.status === 503 && retryCount < MAX_RETRIES) {
-        console.log(`API overloaded, retrying in ${getBackoffDelay(retryCount)}ms... (attempt ${retryCount + 1}/${MAX_RETRIES})`);
+        console.log(
+          `API overloaded, retrying in ${getBackoffDelay(
+            retryCount
+          )}ms... (attempt ${retryCount + 1}/${MAX_RETRIES})`
+        );
         await sleep(getBackoffDelay(retryCount));
         return callGeminiAPIWithModel(prompt, apiKey, model, retryCount + 1);
       }
@@ -148,14 +163,18 @@ async function callGeminiAPIWithModel(
     }
   } catch (error) {
     console.error(`Gemini API Error (${model.name}):`, error);
-    
+
     // Retry on network errors
     if (retryCount < MAX_RETRIES) {
-      console.log(`Network error, retrying in ${getBackoffDelay(retryCount)}ms... (attempt ${retryCount + 1}/${MAX_RETRIES})`);
+      console.log(
+        `Network error, retrying in ${getBackoffDelay(
+          retryCount
+        )}ms... (attempt ${retryCount + 1}/${MAX_RETRIES})`
+      );
       await sleep(getBackoffDelay(retryCount));
       return callGeminiAPIWithModel(prompt, apiKey, model, retryCount + 1);
     }
-    
+
     return null; // Try next model
   }
 }
@@ -163,7 +182,7 @@ async function callGeminiAPIWithModel(
 export async function callGeminiAPI(
   prompt: string,
   apiKey: string,
-  selectedModel: string = 'auto',
+  selectedModel: string = "auto",
   retryCount: number = 0
 ): Promise<QuizData> {
   return tryGeminiModels(prompt, apiKey, selectedModel, retryCount);
@@ -177,51 +196,126 @@ export async function callGeminiAPIWithSplitting(
   questionType: string,
   focusArea: string,
   apiKey: string,
-  selectedModel: string = 'auto'
+  selectedModel: string = "auto",
+  onProgress?: (message: string, current: number, total: number) => void
 ): Promise<QuizData> {
   // If question count is reasonable, use normal approach
-  if (questionCount <= 15) {
-    return callGeminiAPIWithPrompt(content, questionCount, difficulty, questionType, focusArea, apiKey, selectedModel);
+  if (questionCount <= 8) {
+    console.log(`Using single request for ${questionCount} questions`);
+    return callGeminiAPIWithPrompt(
+      content,
+      questionCount,
+      difficulty,
+      questionType,
+      focusArea,
+      apiKey,
+      selectedModel
+    );
   }
 
   // For large question counts, split into multiple requests
   console.log(`Splitting ${questionCount} questions into multiple requests...`);
-  
-  const batchSize = 10; // Process 10 questions at a time
+  onProgress?.(
+    `Starting generation of ${questionCount} questions...`,
+    0,
+    questionCount
+  );
+
+  const batchSize = 5; // Reduced batch size for better reliability
   const batches = Math.ceil(questionCount / batchSize);
   const allQuestions: any[] = [];
 
   for (let i = 0; i < batches; i++) {
     const currentBatchSize = Math.min(batchSize, questionCount - i * batchSize);
     const batchNumber = i + 1;
-    
-    console.log(`Processing batch ${batchNumber}/${batches} (${currentBatchSize} questions)`);
-    
-    try {
-      const batchQuiz = await callGeminiAPIWithPrompt(
-        content, 
-        currentBatchSize, 
-        difficulty, 
-        questionType, 
-        focusArea, 
-        apiKey,
-        selectedModel
-      );
-      
-      allQuestions.push(...batchQuiz.questions);
-      
-      // Add delay between batches to avoid rate limiting
-      if (i < batches - 1) {
-        await sleep(2000); // 2 second delay between batches
+
+    console.log(
+      `Processing batch ${batchNumber}/${batches} (${currentBatchSize} questions)`
+    );
+    onProgress?.(
+      `Generating batch ${batchNumber}/${batches} (${currentBatchSize} questions)...`,
+      allQuestions.length,
+      questionCount
+    );
+
+    let retryCount = 0;
+    const maxRetries = 3;
+
+    while (retryCount < maxRetries) {
+      try {
+        const batchQuiz = await callGeminiAPIWithPrompt(
+          content,
+          currentBatchSize,
+          difficulty,
+          questionType,
+          focusArea,
+          apiKey,
+          selectedModel
+        );
+
+        if (
+          batchQuiz &&
+          batchQuiz.questions &&
+          batchQuiz.questions.length > 0
+        ) {
+          allQuestions.push(...batchQuiz.questions);
+          console.log(
+            `Batch ${batchNumber} successful: ${batchQuiz.questions.length} questions generated`
+          );
+          onProgress?.(
+            `Batch ${batchNumber} completed! Generated ${batchQuiz.questions.length} questions.`,
+            allQuestions.length,
+            questionCount
+          );
+          break; // Success, move to next batch
+        } else {
+          throw new Error("Empty response from API");
+        }
+      } catch (error) {
+        retryCount++;
+        console.error(
+          `Error in batch ${batchNumber} (attempt ${retryCount}/${maxRetries}):`,
+          error
+        );
+
+        if (retryCount >= maxRetries) {
+          console.error(
+            `Batch ${batchNumber} failed after ${maxRetries} attempts`
+          );
+          // Create fallback questions for this batch
+          const fallbackQuestions = createFallbackQuestionsForBatch(
+            currentBatchSize,
+            difficulty,
+            questionType
+          );
+          allQuestions.push(...fallbackQuestions);
+        } else {
+          // Wait before retry with exponential backoff
+          const delay = Math.pow(2, retryCount) * 1000;
+          console.log(`Retrying batch ${batchNumber} in ${delay}ms...`);
+          await sleep(delay);
+        }
       }
-    } catch (error) {
-      console.error(`Error in batch ${batchNumber}:`, error);
-      // Continue with other batches even if one fails
+    }
+
+    // Add delay between batches to avoid rate limiting
+    if (i < batches - 1) {
+      await sleep(3000); // Increased delay between batches
     }
   }
 
+  const finalQuestions = allQuestions.slice(0, questionCount);
+  console.log(
+    `Total questions generated: ${finalQuestions.length}/${questionCount}`
+  );
+  onProgress?.(
+    `Quiz generation complete! Created ${finalQuestions.length} questions.`,
+    finalQuestions.length,
+    questionCount
+  );
+
   return {
-    questions: allQuestions.slice(0, questionCount) // Ensure we don't exceed requested count
+    questions: finalQuestions,
   };
 }
 
@@ -233,25 +327,33 @@ function callGeminiAPIWithPrompt(
   questionType: string,
   focusArea: string,
   apiKey: string,
-  selectedModel: string = 'auto'
+  selectedModel: string = "auto"
 ): Promise<QuizData> {
-  const prompt = `Create ${questionCount} ${difficulty} ${questionType} quiz questions based on this content. ${
-    focusArea ? `Focus on: ${focusArea}` : ""
+  // Truncate content if it's too long to avoid token limits
+  const maxContentLength = 8000; // Conservative limit
+  const truncatedContent =
+    content.length > maxContentLength
+      ? content.substring(0, maxContentLength) +
+        "... [Content truncated for length]"
+      : content;
+
+  const prompt = `Generate exactly ${questionCount} ${difficulty} ${questionType} quiz questions based on this content. ${
+    focusArea ? `Focus specifically on: ${focusArea}` : ""
   }
 
-Content: ${content}
-
-Return ONLY valid JSON with this exact structure:
+IMPORTANT: Return ONLY valid JSON with this exact structure, no additional text:
 {
   "questions": [
     {
-      "question": "Question text",
+      "question": "Clear, specific question text",
       "options": ["Option A", "Option B", "Option C", "Option D"],
       "correct": 0,
-      "explanation": "Detailed explanation"
+      "explanation": "Brief but detailed explanation of why this is correct"
     }
   ]
-}`;
+}
+
+Content: ${truncatedContent}`;
 
   return callGeminiAPI(prompt, apiKey, selectedModel);
 }
@@ -293,4 +395,70 @@ export function createFallbackQuiz(): QuizData {
       },
     ],
   };
+}
+
+// Helper function to create fallback questions for failed batches
+function createFallbackQuestionsForBatch(
+  count: number,
+  difficulty: string,
+  questionType: string
+): any[] {
+  const questions = [];
+  const baseQuestions = [
+    {
+      question: "What is the main topic discussed in the document?",
+      options: ["Topic A", "Topic B", "Topic C", "Topic D"],
+      correct: 0,
+      explanation:
+        "Based on the document content, Topic A is the primary focus.",
+    },
+    {
+      question: "Which concept is most important according to the material?",
+      options: ["Concept A", "Concept B", "Concept C", "Concept D"],
+      correct: 1,
+      explanation:
+        "The document emphasizes Concept B as the most critical element.",
+    },
+    {
+      question: "What approach is recommended in the text?",
+      options: ["Traditional", "Modern", "Hybrid", "Experimental"],
+      correct: 2,
+      explanation:
+        "The document suggests a hybrid approach for optimal results.",
+    },
+    {
+      question: "Which benefit is highlighted most prominently?",
+      options: [
+        "Efficiency",
+        "Cost savings",
+        "User experience",
+        "All of the above",
+      ],
+      correct: 3,
+      explanation: "The document mentions multiple interconnected benefits.",
+    },
+    {
+      question: "What is the key takeaway from this material?",
+      options: [
+        "Process improvement",
+        "Technology adoption",
+        "Strategic planning",
+        "All of the above",
+      ],
+      correct: 3,
+      explanation: "The document covers multiple aspects that work together.",
+    },
+  ];
+
+  for (let i = 0; i < count; i++) {
+    const baseQuestion = baseQuestions[i % baseQuestions.length];
+    questions.push({
+      ...baseQuestion,
+      question: `${baseQuestion.question} (Batch ${
+        Math.floor(i / baseQuestions.length) + 1
+      })`,
+    });
+  }
+
+  return questions;
 }

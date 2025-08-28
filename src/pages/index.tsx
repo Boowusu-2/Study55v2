@@ -136,12 +136,19 @@ export default function SmartStudy(): JSX.Element {
       return;
     }
 
-    setState((prev) => ({ ...prev, isLoading: true, loadingMessage: "Extracting text from documents..." }));
+    setState((prev) => ({
+      ...prev,
+      isLoading: true,
+      loadingMessage: "Extracting text from documents...",
+    }));
 
     try {
       const combinedContent = await extractTextFromServer(state.uploadedFiles);
 
-      setState((prev) => ({ ...prev, loadingMessage: "Generating quiz questions..." }));
+      setState((prev) => ({
+        ...prev,
+        loadingMessage: "Generating quiz questions...",
+      }));
 
       const quizData = await callGeminiAPIWithSplitting(
         combinedContent,
@@ -150,7 +157,13 @@ export default function SmartStudy(): JSX.Element {
         state.quizSettings.questionType,
         state.quizSettings.focusArea,
         state.apiKey,
-        state.quizSettings.model
+        state.quizSettings.model,
+        (message, current, total) => {
+          setState((prev) => ({
+            ...prev,
+            loadingMessage: `${message} (${current}/${total})`,
+          }));
+        }
       );
 
       setState((prev) => ({
