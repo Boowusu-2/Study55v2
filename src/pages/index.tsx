@@ -31,6 +31,7 @@ interface SmartStudyState {
   showResult: boolean;
   quizSettings: QuizSettings;
   quizComplete: boolean;
+  autoAdvancing: boolean;
 }
 
 export default function SmartStudy(): JSX.Element {
@@ -45,6 +46,7 @@ export default function SmartStudy(): JSX.Element {
     selectedAnswer: null,
     showResult: false,
     quizComplete: false,
+    autoAdvancing: false,
     quizSettings: {
       questionCount: 10,
       difficulty: "medium",
@@ -198,6 +200,18 @@ export default function SmartStudy(): JSX.Element {
 
     setTimeout(() => {
       setState((prev) => ({ ...prev, showResult: true }));
+      
+      // Check if answer is correct and auto-advance after showing result
+      const currentQuestion = state.currentQuiz?.questions[state.currentQuestionIndex];
+      if (currentQuestion && optionIndex === currentQuestion.correct && !state.autoAdvancing) {
+        // Set auto-advancing flag to prevent multiple calls
+        setState((prev) => ({ ...prev, autoAdvancing: true }));
+        
+        // Auto-advance to next question after 2 seconds for correct answers
+        setTimeout(() => {
+          nextQuestion();
+        }, 2000);
+      }
     }, 500);
   };
 
@@ -212,6 +226,7 @@ export default function SmartStudy(): JSX.Element {
         currentQuestionIndex: nextIndex,
         selectedAnswer: prev.userAnswers[nextIndex],
         showResult: prev.userAnswers[nextIndex] !== null,
+        autoAdvancing: false, // Reset auto-advancing flag
       }));
     } else {
       showFinalResults();
@@ -268,6 +283,7 @@ export default function SmartStudy(): JSX.Element {
       selectedAnswer: null,
       showResult: false,
       quizComplete: false,
+      autoAdvancing: false,
     }));
   };
 
@@ -724,13 +740,24 @@ export default function SmartStudy(): JSX.Element {
                     <div className="w-8 h-8 bg-blue-400 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
                       <Brain className="w-4 h-4 text-white" />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <h4 className="text-lg font-bold text-blue-200 mb-2">
                         Explanation
                       </h4>
                       <p className="text-blue-100 leading-relaxed">
                         {currentQuestion.explanation}
                       </p>
+                      {/* Auto-advance indicator for correct answers */}
+                      {state.selectedAnswer === currentQuestion.correct && (
+                        <div className="mt-4 p-3 bg-green-500/20 border border-green-400/50 rounded-lg">
+                          <div className="flex items-center gap-2 text-green-200">
+                            <CheckCircle className="w-4 h-4" />
+                            <span className="text-sm font-medium">
+                              Correct! Moving to next question in 2 seconds...
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
