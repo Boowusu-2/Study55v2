@@ -55,6 +55,61 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
+@app.get("/debug-env")
+async def debug_env():
+    """Debug endpoint to check environment variables"""
+    gemini_keys = get_gemini_api_keys()
+    return {
+        "gemini_keys_count": len(gemini_keys),
+        "gemini_keys_preview": [key[:10] + "..." if key else "None" for key in gemini_keys[:3]],
+        "all_env_vars": {k: v for k, v in os.environ.items() if "GEMINI" in k or "API" in k}
+    }
+
+@app.get("/test-ai")
+async def test_ai():
+    """Test AI endpoint to debug API calls"""
+    try:
+        gemini_keys = get_gemini_api_keys()
+        if not gemini_keys:
+            return {"error": "No API keys found"}
+        
+        api_key = gemini_keys[0]
+        
+        # Simple test prompt
+        test_prompt = "Generate a simple JSON response: {\"test\": \"success\"}"
+        
+        headers = {"Content-Type": "application/json"}
+        data = {
+            "contents": [{"parts": [{"text": test_prompt}]}],
+            "generationConfig": {"temperature": 0.1, "maxOutputTokens": 50}
+        }
+        
+        response = requests.post(
+            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}",
+            headers=headers,
+            json=data,
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            generated_text = result["candidates"][0]["content"]["parts"][0]["text"]
+            return {
+                "success": True,
+                "api_key_used": api_key[:10] + "...",
+                "response": generated_text,
+                "status_code": response.status_code
+            }
+        else:
+            return {
+                "success": False,
+                "error": f"API returned {response.status_code}",
+                "response_text": response.text
+            }
+            
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
 
 
 @app.post("/extract-text")
