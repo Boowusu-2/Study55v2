@@ -6,12 +6,16 @@ interface FileUploadProps {
   uploadedFiles: File[];
   onAddFiles: (files: File[]) => void;
   onRemoveFile: (index: number) => void;
+  isUploading?: boolean;
+  uploadProgress?: number;
 }
 
 export default function FileUpload({
   uploadedFiles,
   onAddFiles,
   onRemoveFile,
+  isUploading = false,
+  uploadProgress = 0,
 }: FileUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -73,21 +77,45 @@ export default function FileUpload({
         <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
         <div className="relative z-10">
-          <div className="w-20 h-20 bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 rounded-3xl flex items-center justify-center mx-auto mb-8 group-hover:scale-110 transition-all duration-300 shadow-2xl shadow-purple-500/25 group-hover:shadow-purple-500/40">
-            <Upload className="w-10 h-10 text-white" />
-          </div>
-          <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
-            Upload Your Documents
-          </h3>
-          <p className="text-slate-200 mb-6 text-lg">
-            Drop files here or click to browse
-          </p>
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/20">
-            <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
-            <span className="text-sm text-slate-300 font-medium">
-              Supports PDF, DOC, DOCX, TXT, PPT, PPTX, Images
-            </span>
-          </div>
+          {isUploading ? (
+            <>
+              <div className="w-20 h-20 bg-gradient-to-br from-green-500 via-emerald-500 to-teal-500 rounded-3xl flex items-center justify-center mx-auto mb-8 animate-pulse shadow-2xl shadow-green-500/25">
+                <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+              </div>
+              <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
+                Processing Files...
+              </h3>
+              <div className="w-full max-w-md mx-auto mb-6">
+                <div className="bg-white/10 rounded-full h-3 overflow-hidden">
+                  <div 
+                    className="bg-gradient-to-r from-green-400 to-emerald-500 h-full transition-all duration-300 ease-out"
+                    style={{ width: `${uploadProgress}%` }}
+                  ></div>
+                </div>
+                <p className="text-slate-200 mt-2 text-center">
+                  {uploadProgress}% Complete
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="w-20 h-20 bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 rounded-3xl flex items-center justify-center mx-auto mb-8 group-hover:scale-110 transition-all duration-300 shadow-2xl shadow-purple-500/25 group-hover:shadow-purple-500/40">
+                <Upload className="w-10 h-10 text-white" />
+              </div>
+              <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
+                Upload Your Documents
+              </h3>
+              <p className="text-slate-200 mb-6 text-lg">
+                Drop files here or click to browse
+              </p>
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/20">
+                <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
+                <span className="text-sm text-slate-300 font-medium">
+                  Supports PDF, DOC, DOCX, TXT, PPT, PPTX, Images
+                </span>
+              </div>
+            </>
+          )}
         </div>
         <input
           ref={fileInputRef}

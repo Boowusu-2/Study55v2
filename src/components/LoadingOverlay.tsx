@@ -4,12 +4,16 @@ interface LoadingOverlayProps {
   isLoading: boolean;
   loadingMessage: string;
   onCancel: () => void;
+  progress?: number;
+  isGeneratingMore?: boolean;
 }
 
 export default function LoadingOverlay({
   isLoading,
   loadingMessage,
   onCancel,
+  progress = 0,
+  isGeneratingMore = false,
 }: LoadingOverlayProps) {
   if (!isLoading) return null;
 
@@ -40,6 +44,22 @@ export default function LoadingOverlay({
               <span className="text-sm">Generating questions...</span>
             </div>
           </div>
+
+          {/* Progress bar for quiz generation */}
+          {isGeneratingMore && (
+            <div className="mt-6">
+              <div className="flex justify-between text-sm text-white/80 mb-2">
+                <span>Quiz Generation Progress</span>
+                <span>{progress}%</span>
+              </div>
+              <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+                <div 
+                  className="bg-gradient-to-r from-purple-400 to-pink-500 h-full transition-all duration-300 ease-out"
+                  style={{ width: `${progress}%` }}
+                ></div>
+              </div>
+            </div>
+          )}
 
           {/* Cancel Button */}
           <div className="mt-8 pt-6 border-t border-white/20">

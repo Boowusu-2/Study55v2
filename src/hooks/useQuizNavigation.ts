@@ -13,7 +13,14 @@ export function useQuizNavigation() {
       onUpdateState: (updates: Record<string, unknown>) => void,
       onNextQuestion: () => void
     ) => {
-      if (showResult) return;
+      // Prevent multiple selections
+      if (showResult || autoAdvancing) return;
+
+      // Validate inputs
+      if (!currentQuiz?.questions || currentQuestionIndex >= currentQuiz.questions.length) {
+        console.error("Invalid quiz state in selectAnswer");
+        return;
+      }
 
       const newAnswers = [...userAnswers];
       newAnswers[currentQuestionIndex] = optionIndex;
@@ -27,12 +34,8 @@ export function useQuizNavigation() {
         onUpdateState({ showResult: true });
 
         // Check if answer is correct and auto-advance after showing result
-        const currentQuestion = currentQuiz?.questions[currentQuestionIndex];
-        if (
-          currentQuestion &&
-          optionIndex === currentQuestion.correct &&
-          !autoAdvancing
-        ) {
+        const currentQuestion = currentQuiz.questions[currentQuestionIndex];
+        if (currentQuestion && optionIndex === currentQuestion.correct) {
           // Set auto-advancing flag to prevent multiple calls
           onUpdateState({ autoAdvancing: true });
 
@@ -54,12 +57,18 @@ export function useQuizNavigation() {
       onUpdateState: (updates: Record<string, unknown>) => void,
       onShowFinalResults: () => void
     ) => {
-      if (currentQuestionIndex < (currentQuiz?.questions.length || 0) - 1) {
+      // Validate quiz state
+      if (!currentQuiz?.questions || currentQuiz.questions.length === 0) {
+        console.error("No questions available in nextQuestion");
+        return;
+      }
+
+      if (currentQuestionIndex < currentQuiz.questions.length - 1) {
         const nextIndex = currentQuestionIndex + 1;
         onUpdateState({
           currentQuestionIndex: nextIndex,
-          selectedAnswer: userAnswers[nextIndex],
-          showResult: userAnswers[nextIndex] !== null,
+          selectedAnswer: userAnswers[nextIndex] ?? null,
+          showResult: userAnswers[nextIndex] !== null && userAnswers[nextIndex] !== undefined,
           autoAdvancing: false, // Reset auto-advancing flag
         });
       } else {
@@ -77,13 +86,18 @@ export function useQuizNavigation() {
       onUpdateState: (updates: Record<string, unknown>) => void,
       onShowFinalResults: () => void
     ) => {
-      if (!currentQuiz) return;
+      // Validate quiz state
+      if (!currentQuiz?.questions || currentQuiz.questions.length === 0) {
+        console.error("No questions available in skipQuestion");
+        return;
+      }
+
       if (currentQuestionIndex < currentQuiz.questions.length - 1) {
         const nextIndex = currentQuestionIndex + 1;
         onUpdateState({
           currentQuestionIndex: nextIndex,
-          selectedAnswer: userAnswers[nextIndex],
-          showResult: userAnswers[nextIndex] !== null,
+          selectedAnswer: userAnswers[nextIndex] ?? null,
+          showResult: userAnswers[nextIndex] !== null && userAnswers[nextIndex] !== undefined,
         });
       } else {
         onShowFinalResults();
@@ -102,8 +116,8 @@ export function useQuizNavigation() {
         const prevIndex = currentQuestionIndex - 1;
         onUpdateState({
           currentQuestionIndex: prevIndex,
-          selectedAnswer: userAnswers[prevIndex],
-          showResult: userAnswers[prevIndex] !== null,
+          selectedAnswer: userAnswers[prevIndex] ?? null,
+          showResult: userAnswers[prevIndex] !== null && userAnswers[prevIndex] !== undefined,
         });
       }
     },

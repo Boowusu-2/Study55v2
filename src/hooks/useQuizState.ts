@@ -26,6 +26,8 @@ interface SmartStudyState {
   showSettingsModal: boolean;
   isOfflineMode: boolean;
   extractedText: string;
+  isUploading: boolean;
+  uploadProgress: number;
 }
 
 const initialState: SmartStudyState = {
@@ -58,6 +60,8 @@ const initialState: SmartStudyState = {
   showSettingsModal: false,
   isOfflineMode: false,
   extractedText: "",
+  isUploading: false,
+  uploadProgress: 0,
 };
 
 export function useQuizState() {
@@ -134,10 +138,43 @@ export function useQuizState() {
       });
 
       if (newFiles.length > 0) {
+        // Show upload progress
         setState((prev) => ({
           ...prev,
-          uploadedFiles: [...prev.uploadedFiles, ...newFiles],
+          isUploading: true,
+          uploadProgress: 0,
         }));
+
+        // Simulate upload progress
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+          progress += Math.random() * 15 + 5; // Random progress between 5-20%
+          if (progress >= 100) {
+            progress = 100;
+            clearInterval(progressInterval);
+            
+            // Complete upload
+            setState((prev) => ({
+              ...prev,
+              uploadedFiles: [...prev.uploadedFiles, ...newFiles],
+              isUploading: false,
+              uploadProgress: 100,
+            }));
+
+            // Clear progress after a short delay
+            setTimeout(() => {
+              setState((prev) => ({
+                ...prev,
+                uploadProgress: 0,
+              }));
+            }, 1000);
+          } else {
+            setState((prev) => ({
+              ...prev,
+              uploadProgress: Math.round(progress),
+            }));
+          }
+        }, 200);
       }
     },
     [state.uploadedFiles]

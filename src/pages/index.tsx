@@ -93,6 +93,7 @@ function SmartStudy() {
       isLoading: true,
       loadingMessage: "🚀 Starting quiz generation...",
       questionsReady: false,
+      isUploading: false, // Clear upload state
     });
 
     // Scroll to loading section
@@ -497,6 +498,8 @@ function SmartStudy() {
                     loadingMessage: "",
                   });
                 }}
+                progress={state.isGeneratingMore ? Math.round((state.currentQuiz?.questions.length || 0) / state.targetQuestionCount * 100) : 0}
+                isGeneratingMore={state.isGeneratingMore}
               />
 
               {/* Demo Info Section */}
@@ -507,11 +510,13 @@ function SmartStudy() {
               />
 
               {/* File Upload Section */}
-              <FileUpload
-                uploadedFiles={state.uploadedFiles}
-                onAddFiles={addFiles}
-                onRemoveFile={removeFile}
-              />
+                      <FileUpload
+          uploadedFiles={state.uploadedFiles}
+          onAddFiles={addFiles}
+          onRemoveFile={removeFile}
+          isUploading={state.isUploading}
+          uploadProgress={state.uploadProgress}
+        />
 
               {/* Quiz Settings Section */}
               <QuizSettings
