@@ -5,12 +5,12 @@ PyPDF2==3.0.1
 python-docx==1.1.0
 docx2txt==0.8
 python-pptx==0.6.23
-# OCR Dependencies - using CPU-only versions for deployment
-easyocr==1.7.0
+# OCR Dependencies - removed heavy ML packages for deployment
+# easyocr==1.7.0  # Commented out - too large for Railway
 pytesseract==0.3.10
 Pillow==10.0.1
-# Additional dependencies for EasyOCR - using compatible PyTorch versions
-torch==2.1.0
-torchvision==0.16.0
+# PyTorch dependencies removed - too large for Railway
+# torch==2.1.0
+# torchvision==0.16.0
 # Optional: Google Cloud Vision (uncomment if using Google Cloud)
 # google-cloud-vision==3.4.4
