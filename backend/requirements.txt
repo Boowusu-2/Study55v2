@@ -9,8 +9,8 @@ python-pptx==0.6.23
 easyocr==1.7.0
 pytesseract==0.3.10
 Pillow==10.0.1
-# Additional dependencies for EasyOCR
-torch==2.0.1+cpu
-torchvision==0.15.2+cpu
+# Additional dependencies for EasyOCR - using compatible PyTorch versions
+torch==2.1.0
+torchvision==0.16.0
 # Optional: Google Cloud Vision (uncomment if using Google Cloud)
 # google-cloud-vision==3.4.4
