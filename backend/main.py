@@ -55,15 +55,7 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
-@app.get("/debug-env")
-async def debug_env():
-    """Debug endpoint to check environment variables"""
-    gemini_keys = get_gemini_api_keys()
-    return {
-        "gemini_keys_count": len(gemini_keys),
-        "gemini_keys_preview": [key[:10] + "..." if key else "None" for key in gemini_keys[:3]],
-        "all_env_vars": {k: v for k, v in os.environ.items() if "GEMINI" in k or "API" in k}
-    }
+
 
 @app.post("/extract-text")
 async def extract_text(files: List[UploadFile] = File(...)):
