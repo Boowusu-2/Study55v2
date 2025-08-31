@@ -498,7 +498,15 @@ function SmartStudy() {
                     loadingMessage: "",
                   });
                 }}
-                progress={state.isGeneratingMore ? Math.round((state.currentQuiz?.questions.length || 0) / state.targetQuestionCount * 100) : 0}
+                progress={
+                  state.isGeneratingMore
+                    ? Math.round(
+                        ((state.currentQuiz?.questions.length || 0) /
+                          state.targetQuestionCount) *
+                          100
+                      )
+                    : 0
+                }
                 isGeneratingMore={state.isGeneratingMore}
               />
 
@@ -510,13 +518,13 @@ function SmartStudy() {
               />
 
               {/* File Upload Section */}
-                      <FileUpload
-          uploadedFiles={state.uploadedFiles}
-          onAddFiles={addFiles}
-          onRemoveFile={removeFile}
-          isUploading={state.isUploading}
-          uploadProgress={state.uploadProgress}
-        />
+              <FileUpload
+                uploadedFiles={state.uploadedFiles}
+                onAddFiles={addFiles}
+                onRemoveFile={removeFile}
+                isUploading={state.isUploading}
+                uploadProgress={state.uploadProgress}
+              />
 
               {/* Quiz Settings Section */}
               <QuizSettings
