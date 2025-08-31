@@ -136,25 +136,35 @@ async def generate_quiz(request: dict):
         
         # Create prompt for quiz generation
         prompt = f"""
-Generate {question_count} {difficulty} difficulty {question_type} questions based on this document content:
+You are an expert quiz generator. Create {question_count} {difficulty} difficulty {question_type} questions based on the following document content.
 
+DOCUMENT CONTENT:
 {content}
 
-{f"Focus on: {focus_area}" if focus_area else ""}
+{f"FOCUS AREA: {focus_area}" if focus_area else ""}
 
-Return ONLY valid JSON in this exact format:
+INSTRUCTIONS:
+1. Generate questions that are SPECIFIC to the document content provided
+2. Use details, concepts, and examples mentioned in the document
+3. Make questions challenging but appropriate for {difficulty} difficulty
+4. Ensure all options are plausible but only one is correct
+5. Provide clear explanations for the correct answer
+
+CRITICAL: You must return ONLY valid JSON. No markdown, no code blocks, no additional text.
+
+REQUIRED JSON FORMAT:
 {{
   "questions": [
     {{
-      "question": "Question text here",
+      "question": "Specific question about the document content",
       "options": ["Option A", "Option B", "Option C", "Option D"],
       "correct": 0,
-      "explanation": "Explanation of the correct answer"
+      "explanation": "Detailed explanation of why this answer is correct, referencing the document content"
     }}
   ]
 }}
 
-Make sure the questions are relevant to the document content and vary in difficulty.
+Remember: Base your questions on the ACTUAL content provided above, not generic knowledge.
 """
         
         # Call Gemini API
@@ -187,11 +197,16 @@ Make sure the questions are relevant to the document content and vary in difficu
         result = response.json()
         generated_text = result["candidates"][0]["content"]["parts"][0]["text"]
         
+        print(f"AI Response: {generated_text}")
+        
         # Parse JSON response
         try:
             quiz_data = json.loads(generated_text)
+            print(f"Successfully parsed AI response: {len(quiz_data.get('questions', []))} questions")
             return JSONResponse(content=quiz_data)
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
+            print(f"JSON parsing failed: {e}")
+            print(f"Raw AI response: {generated_text}")
             # If JSON parsing fails, create fallback questions
             fallback_questions = create_fallback_questions(content, question_count)
             return JSONResponse(content={"questions": fallback_questions})
@@ -226,45 +241,61 @@ async def guided_learning(request: dict):
         if step == "analyze":
             # Create learning plan
             prompt = f"""
-Analyze this document and create a comprehensive learning plan:
+You are an expert educational tutor. Analyze the following document and create a comprehensive learning plan that helps students understand the key concepts.
 
+DOCUMENT CONTENT:
 {content}
 
-Return ONLY valid JSON in this exact format:
+INSTRUCTIONS:
+1. Create 4-5 learning steps that progressively build understanding
+2. Each step should focus on specific concepts from the document
+3. Include a mix of explanations, examples, and practice questions
+4. Make the content engaging and educational
+5. Base everything on the ACTUAL document content provided
+
+CRITICAL: You must return ONLY valid JSON. No markdown, no code blocks, no additional text.
+
+REQUIRED JSON FORMAT:
 {{
   "learningSteps": [
     {{
       "id": "intro",
-      "title": "Welcome to Learning",
-      "content": "Introduction content",
+      "title": "Introduction to [Main Topic]",
+      "content": "Detailed introduction based on the document content",
       "type": "explanation"
     }},
     {{
       "id": "concept1",
-      "title": "Key Concept 1",
-      "content": "Concept explanation",
+      "title": "[Specific Concept from Document]",
+      "content": "Detailed explanation of this concept as mentioned in the document",
+      "type": "explanation"
+    }},
+    {{
+      "id": "concept2",
+      "title": "[Another Key Concept from Document]",
+      "content": "Detailed explanation of this concept as mentioned in the document",
       "type": "explanation"
     }},
     {{
       "id": "practice",
       "title": "Practice Questions",
-      "content": "Practice content",
+      "content": "Let's test your understanding of the concepts we've covered",
       "type": "question",
-      "question": "What is the main topic?",
-      "options": ["Option A", "Option B", "Option C"],
-      "correctAnswer": "Option A",
-      "explanation": "Explanation"
+      "question": "Specific question about the document content",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correctAnswer": "Correct option",
+      "explanation": "Detailed explanation referencing the document content"
     }},
     {{
       "id": "summary",
       "title": "Learning Summary",
-      "content": "Summary content",
+      "content": "Comprehensive summary of the key points from the document",
       "type": "explanation"
     }}
   ]
 }}
 
-Create 4-5 learning steps that cover the main concepts in the document.
+Remember: Base your learning plan on the ACTUAL content provided above, not generic knowledge.
 """
         else:
             # Handle other steps (evaluate, etc.)
@@ -306,11 +337,16 @@ Return a simple JSON response with guidance.
         result = response.json()
         generated_text = result["candidates"][0]["content"]["parts"][0]["text"]
         
+        print(f"AI Learning Response: {generated_text}")
+        
         # Parse JSON response
         try:
             learning_data = json.loads(generated_text)
+            print(f"Successfully parsed AI learning response: {len(learning_data.get('learningSteps', []))} steps")
             return JSONResponse(content=learning_data)
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
+            print(f"Learning JSON parsing failed: {e}")
+            print(f"Raw AI learning response: {generated_text}")
             # If JSON parsing fails, create fallback learning steps
             fallback_steps = create_fallback_learning_steps(content)
             return JSONResponse(content={"learningSteps": fallback_steps})
