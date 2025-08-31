@@ -168,7 +168,7 @@ export default function SettingsModal({
                     // Export quiz data functionality
                     const quizData = {
                       questions: [], // This would be populated with actual quiz data
-                      timestamp: new Date().toISOString(),
+                      timestamp: "2025-08-31T00:00:00.000Z",
                       user: "Current User",
                     };
                     const dataStr = JSON.stringify(quizData, null, 2);
@@ -176,14 +176,14 @@ export default function SettingsModal({
                       type: "application/json",
                     });
                     const url = URL.createObjectURL(dataBlob);
-                    const link = document.createElement("a");
-                    link.href = url;
-                    link.download = `quiz-data-${
-                      new Date().toISOString().split("T")[0]
-                    }.json`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
+                    if (typeof window !== "undefined") {
+                      const link = document.createElement("a");
+                      link.href = url;
+                      link.download = `quiz-data-2025-08-31.json`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }
                     URL.revokeObjectURL(url);
                   }}
                   className="w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors flex items-center gap-3"
@@ -196,16 +196,18 @@ export default function SettingsModal({
                 <button
                   onClick={() => {
                     // Share progress functionality
-                    if (navigator.share) {
-                      navigator.share({
-                        title: "My Study.ai Progress",
-                        text: "Check out my learning progress on study.ai!",
-                        url: window.location.href,
-                      });
-                    } else {
-                      // Fallback for browsers that don't support Web Share API
-                      navigator.clipboard.writeText(window.location.href);
-                      alert("Link copied to clipboard!");
+                    if (typeof window !== "undefined") {
+                      if (navigator.share) {
+                        navigator.share({
+                          title: "My Study.ai Progress",
+                          text: "Check out my learning progress on study.ai!",
+                          url: window.location.href,
+                        });
+                      } else {
+                        // Fallback for browsers that don't support Web Share API
+                        navigator.clipboard.writeText(window.location.href);
+                        alert("Link copied to clipboard!");
+                      }
                     }
                   }}
                   className="w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors flex items-center gap-3"

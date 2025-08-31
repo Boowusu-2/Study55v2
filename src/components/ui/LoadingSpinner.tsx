@@ -21,7 +21,10 @@ export default function LoadingSpinner({
     lg: "w-8 h-8",
   };
 
-  const percentage = total > 0 ? Math.round((progress / total) * 100) : 0;
+  const percentage =
+    typeof window !== "undefined" && total > 0
+      ? Math.round((progress / total) * 100)
+      : 0;
 
   return (
     <div className="flex flex-col items-center justify-center p-6 space-y-4">

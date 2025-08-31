@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "npm run build && npx serve out -p 3000",
     "build": "next build",
-    "start": "next start",
+    "start": "npx serve out -p 3000",
+    "dev:watch": "nodemon --watch src --ext ts,tsx,js,jsx --exec 'npm run build && npx serve out -p 3000'",
     "lint": "eslint"
   },
   "dependencies": {
@@ -33,6 +34,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.2",
     "formidable": "^3.5.4",
+    "serve": "^14.2.4",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

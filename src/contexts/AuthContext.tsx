@@ -112,20 +112,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        if (typeof window !== 'undefined') {
-          const token = localStorage.getItem("studyai_token");
-          if (token) {
-            // In a real app, you'd validate the token with your backend
-            const userData = localStorage.getItem("studyai_user");
-            if (userData) {
-              const user = JSON.parse(userData);
-              dispatch({ type: "SET_USER", payload: user });
-            } else {
-              dispatch({ type: "LOGOUT" });
-            }
+        const token = localStorage.getItem("studyai_token");
+        if (token) {
+          // In a real app, you'd validate the token with your backend
+          const userData = localStorage.getItem("studyai_user");
+          if (userData) {
+            const user = JSON.parse(userData);
+            dispatch({ type: "SET_USER", payload: user });
           } else {
-            dispatch({ type: "SET_LOADING", payload: false });
+            dispatch({ type: "LOGOUT" });
           }
+        } else {
+          dispatch({ type: "SET_LOADING", payload: false });
         }
       } catch (error) {
         console.error("Auth check failed:", error);
@@ -158,8 +156,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: credentials.email,
         name: credentials.email.split("@")[0],
         isPro: false,
-        createdAt: new Date().toISOString(),
-        lastLoginAt: new Date().toISOString(),
+        createdAt: "2025-08-31T00:00:00.000Z",
+        lastLoginAt: "2025-08-31T00:00:00.000Z",
         stats: {
           totalQuizzes: 0,
           totalQuestions: 0,
@@ -169,16 +167,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         subscription: {
           planId: "free",
           status: "active",
-          startDate: new Date().toISOString(),
-          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          startDate: "2025-08-31T00:00:00.000Z",
+          endDate: "2025-09-30T00:00:00.000Z",
         },
       };
 
       // Save to localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem("studyai_token", "mock_token");
-        localStorage.setItem("studyai_user", JSON.stringify(user));
-      }
+      localStorage.setItem("studyai_token", "mock_token");
+      localStorage.setItem("studyai_user", JSON.stringify(user));
 
       dispatch({ type: "SET_USER", payload: user });
       return { success: true };
@@ -191,10 +187,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Logout function
   const logout = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem("studyai_token");
-      localStorage.removeItem("studyai_user");
-    }
+    localStorage.removeItem("studyai_token");
+    localStorage.removeItem("studyai_user");
     dispatch({ type: "LOGOUT" });
   };
 
@@ -213,8 +207,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: credentials.email,
         name: credentials.email.split("@")[0],
         isPro: false,
-        createdAt: new Date().toISOString(),
-        lastLoginAt: new Date().toISOString(),
+        createdAt: "2025-08-31T00:00:00.000Z",
+        lastLoginAt: "2025-08-31T00:00:00.000Z",
         stats: {
           totalQuizzes: 0,
           totalQuestions: 0,
@@ -224,16 +218,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         subscription: {
           planId: "free",
           status: "active",
-          startDate: new Date().toISOString(),
-          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          startDate: "2025-08-31T00:00:00.000Z",
+          endDate: "2025-09-30T00:00:00.000Z",
         },
       };
 
       // Save to localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem("studyai_token", "mock_token");
-        localStorage.setItem("studyai_user", JSON.stringify(user));
-      }
+      localStorage.setItem("studyai_token", "mock_token");
+      localStorage.setItem("studyai_user", JSON.stringify(user));
 
       dispatch({ type: "SET_USER", payload: user });
       return { success: true };
@@ -270,11 +262,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!state.user) return { success: false, error: "No user logged in" };
 
       const updatedUser = { ...state.user, ...updates };
-      
+
       // Save to localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem("studyai_user", JSON.stringify(updatedUser));
-      }
+      localStorage.setItem("studyai_user", JSON.stringify(updatedUser));
 
       dispatch({ type: "SET_USER", payload: updatedUser });
       return { success: true };
@@ -321,10 +311,18 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  login: (credentials: LoginCredentials) => Promise<{ success: boolean; error?: string }>;
+  login: (
+    credentials: LoginCredentials
+  ) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
-  register: (credentials: LoginCredentials) => Promise<{ success: boolean; error?: string }>;
-  resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
+  register: (
+    credentials: LoginCredentials
+  ) => Promise<{ success: boolean; error?: string }>;
+  resetPassword: (
+    email: string
+  ) => Promise<{ success: boolean; error?: string }>;
   clearError: () => void;
-  updateProfile: (updates: Partial<User>) => Promise<{ success: boolean; error?: string }>;
+  updateProfile: (
+    updates: Partial<User>
+  ) => Promise<{ success: boolean; error?: string }>;
 }

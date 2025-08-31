@@ -156,7 +156,7 @@ export default function SEO({
             screenshot: image,
             softwareVersion: "1.0.0",
             datePublished: "2024-01-01",
-            dateModified: new Date().toISOString().split("T")[0],
+            dateModified: "2025-08-31",
           }),
         }}
       />

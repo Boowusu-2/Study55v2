@@ -21,22 +21,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Load theme from localStorage
-    if (typeof window !== "undefined") {
-      const savedTheme = localStorage.getItem("studyai_theme") as Theme;
-      if (savedTheme) {
-        setTheme(savedTheme);
-      } else {
-        // Default to system preference
-        setTheme("system");
-      }
+    const savedTheme = localStorage.getItem("studyai_theme") as Theme;
+    if (savedTheme) {
+      setTheme(savedTheme);
+    } else {
+      // Default to system preference
+      setTheme("system");
     }
   }, []);
 
   useEffect(() => {
     // Save theme to localStorage
-    if (typeof window !== "undefined") {
-      localStorage.setItem("studyai_theme", theme);
-    }
+    localStorage.setItem("studyai_theme", theme);
 
     // Apply theme to document
     const root = document.documentElement;
@@ -59,7 +55,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Listen for system theme changes
   useEffect(() => {
     if (theme !== "system") return;
-    
+
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const handleChange = (e: MediaQueryListEvent) => {
       setIsDark(e.matches);

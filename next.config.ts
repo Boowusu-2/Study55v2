@@ -1,8 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  reactStrictMode: true,
+  reactStrictMode: false, // Disable strict mode to prevent double rendering
+  // Completely disable SSR to prevent hydration issues
+  output: "export",
+  trailingSlash: true,
+  distDir: "out",
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "http",

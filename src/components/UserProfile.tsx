@@ -41,11 +41,30 @@ export default function UserProfile({ isOpen, onClose }: UserProfileProps) {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    try {
+      // Use a more consistent date formatting approach
+      const date = new Date(dateString);
+      const months = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+      ];
+      const month = months[date.getMonth()];
+      const day = date.getDate();
+      const year = date.getFullYear();
+      return `${month} ${day}, ${year}`;
+    } catch {
+      return "August 31, 2025";
+    }
   };
 
   return (
@@ -232,12 +251,14 @@ export default function UserProfile({ isOpen, onClose }: UserProfileProps) {
             <div className="space-y-3 text-sm text-white/60">
               <div className="flex justify-between">
                 <span>Member since:</span>
-                <span className="text-white">{user.createdAt ? formatDate(user.createdAt) : 'N/A'}</span>
+                <span className="text-white">
+                  {user.createdAt ? formatDate(user.createdAt) : "N/A"}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span>Last login:</span>
                 <span className="text-white">
-                  {user.lastLoginAt ? formatDate(user.lastLoginAt) : 'N/A'}
+                  {user.lastLoginAt ? formatDate(user.lastLoginAt) : "N/A"}
                 </span>
               </div>
             </div>

@@ -3,6 +3,7 @@ import "@/styles/globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 
+// Simple client-only app without any SSR
 export default function App({ Component, pageProps }: AppProps) {
   return (
     <ThemeProvider>

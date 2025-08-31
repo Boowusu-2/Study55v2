@@ -397,7 +397,16 @@ export default function PaymentModal({
                   <div className="text-left space-y-2 text-sm text-blue-100">
                     <div>• Transfer amount: {selectedPlan.price}</div>
                     <div>
-                      • Reference: STUDYAI-{Date.now().toString().slice(-6)}
+                      • Reference: STUDYAI-
+                      {typeof window !== "undefined"
+                        ? Math.floor(
+                            (typeof window !== "undefined"
+                              ? Math.random()
+                              : 0.123456) * 1000000
+                          )
+                            .toString()
+                            .padStart(6, "0")
+                        : "000000"}
                     </div>
                     <div>• Processing time: 1-3 business days</div>
                   </div>

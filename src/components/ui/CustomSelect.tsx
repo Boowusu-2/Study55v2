@@ -50,8 +50,11 @@ export default function CustomSelect({
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    if (typeof window !== "undefined") {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
   }, []);
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
