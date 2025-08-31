@@ -167,47 +167,72 @@ REQUIRED JSON FORMAT:
 Remember: Base your questions on the ACTUAL content provided above, not generic knowledge.
 """
         
-        # Call Gemini API
-        headers = {
-            "Content-Type": "application/json",
-        }
+        # Call Gemini API with multiple retries and different models
+        gemini_models = [
+            "gemini-2.0-flash",
+            "gemini-1.5-pro",
+            "gemini-1.5-flash"
+        ]
         
-        data = {
-            "contents": [{
-                "parts": [{
-                    "text": prompt
-                }]
-            }],
-            "generationConfig": {
-                "temperature": 0.7,
-                "maxOutputTokens": 4096,
-            }
-        }
+        ai_success = False
+        generated_text = ""
         
-        response = requests.post(
-            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}",
-            headers=headers,
-            json=data,
-            timeout=30
-        )
+        for model in gemini_models:
+            try:
+                print(f"Trying Gemini model: {model}")
+                
+                headers = {
+                    "Content-Type": "application/json",
+                }
+                
+                data = {
+                    "contents": [{
+                        "parts": [{
+                            "text": prompt
+                        }]
+                    }],
+                    "generationConfig": {
+                        "temperature": 0.3,  # Lower temperature for more consistent JSON
+                        "maxOutputTokens": 4096,
+                    }
+                }
+                
+                response = requests.post(
+                    f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}",
+                    headers=headers,
+                    json=data,
+                    timeout=30
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    generated_text = result["candidates"][0]["content"]["parts"][0]["text"]
+                    print(f"AI Response from {model}: {generated_text[:200]}...")
+                    
+                    # Try to parse JSON
+                    try:
+                        quiz_data = json.loads(generated_text)
+                        if quiz_data.get("questions") and len(quiz_data["questions"]) > 0:
+                            print(f"Successfully parsed AI response from {model}: {len(quiz_data.get('questions', []))} questions")
+                            ai_success = True
+                            break
+                        else:
+                            print(f"AI response from {model} has no questions")
+                    except json.JSONDecodeError as e:
+                        print(f"JSON parsing failed for {model}: {e}")
+                        print(f"Raw AI response from {model}: {generated_text}")
+                else:
+                    print(f"AI service error for {model}: {response.status_code} - {response.text}")
+                    
+            except Exception as e:
+                print(f"Error with {model}: {e}")
+                continue
         
-        if response.status_code != 200:
-            raise HTTPException(status_code=500, detail=f"AI service error: {response.text}")
-        
-        result = response.json()
-        generated_text = result["candidates"][0]["content"]["parts"][0]["text"]
-        
-        print(f"AI Response: {generated_text}")
-        
-        # Parse JSON response
-        try:
-            quiz_data = json.loads(generated_text)
-            print(f"Successfully parsed AI response: {len(quiz_data.get('questions', []))} questions")
+        if ai_success:
             return JSONResponse(content=quiz_data)
-        except json.JSONDecodeError as e:
-            print(f"JSON parsing failed: {e}")
-            print(f"Raw AI response: {generated_text}")
-            # If JSON parsing fails, create fallback questions
+        else:
+            print("All AI models failed, using fallback questions")
+            # If all AI attempts fail, create fallback questions
             fallback_questions = create_fallback_questions(content, question_count)
             return JSONResponse(content={"questions": fallback_questions})
             
@@ -307,47 +332,72 @@ Based on the document content, provide guidance for step: {step}
 Return a simple JSON response with guidance.
 """
         
-        # Call Gemini API
-        headers = {
-            "Content-Type": "application/json",
-        }
+        # Call Gemini API with multiple retries and different models
+        gemini_models = [
+            "gemini-2.0-flash",
+            "gemini-1.5-pro",
+            "gemini-1.5-flash"
+        ]
         
-        data = {
-            "contents": [{
-                "parts": [{
-                    "text": prompt
-                }]
-            }],
-            "generationConfig": {
-                "temperature": 0.7,
-                "maxOutputTokens": 4096,
-            }
-        }
+        ai_success = False
+        generated_text = ""
         
-        response = requests.post(
-            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}",
-            headers=headers,
-            json=data,
-            timeout=30
-        )
+        for model in gemini_models:
+            try:
+                print(f"Trying Gemini model for learning: {model}")
+                
+                headers = {
+                    "Content-Type": "application/json",
+                }
+                
+                data = {
+                    "contents": [{
+                        "parts": [{
+                            "text": prompt
+                        }]
+                    }],
+                    "generationConfig": {
+                        "temperature": 0.3,  # Lower temperature for more consistent JSON
+                        "maxOutputTokens": 4096,
+                    }
+                }
+                
+                response = requests.post(
+                    f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}",
+                    headers=headers,
+                    json=data,
+                    timeout=30
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    generated_text = result["candidates"][0]["content"]["parts"][0]["text"]
+                    print(f"AI Learning Response from {model}: {generated_text[:200]}...")
+                    
+                    # Try to parse JSON
+                    try:
+                        learning_data = json.loads(generated_text)
+                        if learning_data.get("learningSteps") and len(learning_data["learningSteps"]) > 0:
+                            print(f"Successfully parsed AI learning response from {model}: {len(learning_data.get('learningSteps', []))} steps")
+                            ai_success = True
+                            break
+                        else:
+                            print(f"AI learning response from {model} has no learning steps")
+                    except json.JSONDecodeError as e:
+                        print(f"Learning JSON parsing failed for {model}: {e}")
+                        print(f"Raw AI learning response from {model}: {generated_text}")
+                else:
+                    print(f"AI service error for learning {model}: {response.status_code} - {response.text}")
+                    
+            except Exception as e:
+                print(f"Error with learning {model}: {e}")
+                continue
         
-        if response.status_code != 200:
-            raise HTTPException(status_code=500, detail=f"AI service error: {response.text}")
-        
-        result = response.json()
-        generated_text = result["candidates"][0]["content"]["parts"][0]["text"]
-        
-        print(f"AI Learning Response: {generated_text}")
-        
-        # Parse JSON response
-        try:
-            learning_data = json.loads(generated_text)
-            print(f"Successfully parsed AI learning response: {len(learning_data.get('learningSteps', []))} steps")
+        if ai_success:
             return JSONResponse(content=learning_data)
-        except json.JSONDecodeError as e:
-            print(f"Learning JSON parsing failed: {e}")
-            print(f"Raw AI learning response: {generated_text}")
-            # If JSON parsing fails, create fallback learning steps
+        else:
+            print("All AI models failed for learning, using fallback steps")
+            # If all AI attempts fail, create fallback learning steps
             fallback_steps = create_fallback_learning_steps(content)
             return JSONResponse(content={"learningSteps": fallback_steps})
             
