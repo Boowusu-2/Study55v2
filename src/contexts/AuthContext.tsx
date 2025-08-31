@@ -1,5 +1,11 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { AuthContextType, AuthState, LoginCredentials, RegisterData, User } from '@/types/auth';
+import React, { createContext, useContext, useReducer, useEffect } from "react";
+import {
+  AuthContextType,
+  AuthState,
+  LoginCredentials,
+  RegisterData,
+  User,
+} from "@/types/auth";
 
 // Initial state
 const initialState: AuthState = {
@@ -11,18 +17,18 @@ const initialState: AuthState = {
 
 // Action types
 type AuthAction =
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_USER'; payload: User | null }
-  | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'CLEAR_ERROR' }
-  | { type: 'LOGOUT' };
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_USER"; payload: User | null }
+  | { type: "SET_ERROR"; payload: string | null }
+  | { type: "CLEAR_ERROR" }
+  | { type: "LOGOUT" };
 
 // Reducer
 function authReducer(state: AuthState, action: AuthAction): AuthState {
   switch (action.type) {
-    case 'SET_LOADING':
+    case "SET_LOADING":
       return { ...state, isLoading: action.payload };
-    case 'SET_USER':
+    case "SET_USER":
       return {
         ...state,
         user: action.payload,
@@ -30,11 +36,11 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
         isLoading: false,
         error: null,
       };
-    case 'SET_ERROR':
+    case "SET_ERROR":
       return { ...state, error: action.payload, isLoading: false };
-    case 'CLEAR_ERROR':
+    case "CLEAR_ERROR":
       return { ...state, error: null };
-    case 'LOGOUT':
+    case "LOGOUT":
       return { ...initialState, isLoading: false };
     default:
       return state;
@@ -52,53 +58,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const token = localStorage.getItem('smartstudy_token');
+        const token = localStorage.getItem("studyai_token");
         if (token) {
           // In a real app, you'd validate the token with your backend
-          const userData = localStorage.getItem('smartstudy_user');
+          const userData = localStorage.getItem("studyai_user");
           if (userData) {
             const user = JSON.parse(userData);
-            dispatch({ type: 'SET_USER', payload: user });
+            dispatch({ type: "SET_USER", payload: user });
           } else {
-            dispatch({ type: 'LOGOUT' });
+            dispatch({ type: "LOGOUT" });
           }
         } else {
-          dispatch({ type: 'SET_LOADING', payload: false });
+          dispatch({ type: "SET_LOADING", payload: false });
         }
       } catch (error) {
-        console.error('Auth check failed:', error);
-        dispatch({ type: 'LOGOUT' });
+        console.error("Auth check failed:", error);
+        dispatch({ type: "LOGOUT" });
       }
     };
 
+    // Add a timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      dispatch({ type: "SET_LOADING", payload: false });
+    }, 3000); // 3 second timeout
+
     checkAuth();
+
+    return () => clearTimeout(timeoutId);
   }, []);
 
   // Login function
   const login = async (credentials: LoginCredentials): Promise<void> => {
-    dispatch({ type: 'SET_LOADING', payload: true });
-    dispatch({ type: 'CLEAR_ERROR' });
+    dispatch({ type: "SET_LOADING", payload: true });
+    dispatch({ type: "CLEAR_ERROR" });
 
     try {
       // Simulate API call - replace with actual authentication
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // Mock user data - replace with actual API response
       const mockUser: User = {
-        id: '1',
+        id: "1",
         email: credentials.email,
-        name: credentials.email.split('@')[0],
+        name: credentials.email.split("@")[0],
         avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${credentials.email}`,
         subscription: {
-          planId: 'free',
-          status: 'active',
+          planId: "free",
+          status: "active",
           startDate: new Date().toISOString(),
-          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          endDate: new Date(
+            Date.now() + 30 * 24 * 60 * 60 * 1000
+          ).toISOString(),
         },
         preferences: {
-          theme: 'dark',
+          theme: "dark",
           notifications: true,
-          language: 'en',
+          language: "en",
         },
         stats: {
           totalQuizzes: 0,
@@ -111,40 +126,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
 
       // Store in localStorage (in real app, store JWT token)
-      localStorage.setItem('smartstudy_token', 'mock-jwt-token');
-      localStorage.setItem('smartstudy_user', JSON.stringify(mockUser));
+      localStorage.setItem("studyai_token", "mock-jwt-token");
+      localStorage.setItem("studyai_user", JSON.stringify(mockUser));
 
-      dispatch({ type: 'SET_USER', payload: mockUser });
+      dispatch({ type: "SET_USER", payload: mockUser });
     } catch {
-      dispatch({ type: 'SET_ERROR', payload: 'Login failed. Please check your credentials.' });
+      dispatch({
+        type: "SET_ERROR",
+        payload: "Login failed. Please check your credentials.",
+      });
     }
   };
 
   // Register function
   const register = async (data: RegisterData): Promise<void> => {
-    dispatch({ type: 'SET_LOADING', payload: true });
-    dispatch({ type: 'CLEAR_ERROR' });
+    dispatch({ type: "SET_LOADING", payload: true });
+    dispatch({ type: "CLEAR_ERROR" });
 
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // Mock user data
       const mockUser: User = {
-        id: '1',
+        id: "1",
         email: data.email,
         name: data.name,
         avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.email}`,
         subscription: {
-          planId: 'free',
-          status: 'active',
+          planId: "free",
+          status: "active",
           startDate: new Date().toISOString(),
-          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          endDate: new Date(
+            Date.now() + 30 * 24 * 60 * 60 * 1000
+          ).toISOString(),
         },
         preferences: {
-          theme: 'dark',
+          theme: "dark",
           notifications: true,
-          language: 'en',
+          language: "en",
         },
         stats: {
           totalQuizzes: 0,
@@ -156,20 +176,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         lastLoginAt: new Date().toISOString(),
       };
 
-      localStorage.setItem('smartstudy_token', 'mock-jwt-token');
-      localStorage.setItem('smartstudy_user', JSON.stringify(mockUser));
+      localStorage.setItem("studyai_token", "mock-jwt-token");
+      localStorage.setItem("studyai_user", JSON.stringify(mockUser));
 
-      dispatch({ type: 'SET_USER', payload: mockUser });
+      dispatch({ type: "SET_USER", payload: mockUser });
     } catch {
-      dispatch({ type: 'SET_ERROR', payload: 'Registration failed. Please try again.' });
+      dispatch({
+        type: "SET_ERROR",
+        payload: "Registration failed. Please try again.",
+      });
     }
   };
 
   // Logout function
   const logout = (): void => {
-    localStorage.removeItem('smartstudy_token');
-    localStorage.removeItem('smartstudy_user');
-    dispatch({ type: 'LOGOUT' });
+    localStorage.removeItem("studyai_token");
+    localStorage.removeItem("studyai_user");
+    dispatch({ type: "LOGOUT" });
   };
 
   // Update profile function
@@ -178,27 +201,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const updatedUser = { ...state.user, ...updates };
-      localStorage.setItem('smartstudy_user', JSON.stringify(updatedUser));
-      dispatch({ type: 'SET_USER', payload: updatedUser });
+      localStorage.setItem("studyai_user", JSON.stringify(updatedUser));
+      dispatch({ type: "SET_USER", payload: updatedUser });
     } catch {
-      dispatch({ type: 'SET_ERROR', payload: 'Failed to update profile.' });
+      dispatch({ type: "SET_ERROR", payload: "Failed to update profile." });
     }
   };
 
   // Reset password function
-  const resetPassword = async (_email: string): Promise<void> => {
+  const resetPassword = async (email: string): Promise<void> => {
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // In real app, this would send a password reset email
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // In real app, this would send a password reset email to: ${email}
+      console.log(`Password reset email would be sent to: ${email}`);
     } catch {
-      dispatch({ type: 'SET_ERROR', payload: 'Failed to send reset email.' });
+      dispatch({ type: "SET_ERROR", payload: "Failed to send reset email." });
     }
   };
 
   // Clear error function
   const clearError = (): void => {
-    dispatch({ type: 'CLEAR_ERROR' });
+    dispatch({ type: "CLEAR_ERROR" });
   };
 
   const value: AuthContextType = {
@@ -218,7 +242,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

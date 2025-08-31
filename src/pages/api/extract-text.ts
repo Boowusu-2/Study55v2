@@ -40,19 +40,17 @@ export default async function handler(
       return res.status(400).json({ error: "No files uploaded" });
     }
 
-    console.log("Processing files:", inputFiles.map(f => f.originalFilename));
+    console.log(
+      "Processing files:",
+      inputFiles.map((f) => f.originalFilename)
+    );
 
     // Call python extractor with file paths
-    const scriptPath = path.join(
-      process.cwd(),
-      "src",
-      "python",
-      "extract_text.py"
-    );
-    
+    const scriptPath = path.join(process.cwd(), "backend", "extract_text.py");
+
     console.log("Script path:", scriptPath);
     console.log("Script exists:", fs.existsSync(scriptPath));
-    
+
     const args = [scriptPath, ...inputFiles.map((file) => file.filepath)];
     console.log("Python args:", args);
 
@@ -65,7 +63,7 @@ export default async function handler(
       console.log("Python stdout:", data);
       out += data;
     });
-    
+
     py.stderr.on("data", (d) => {
       const data = d.toString();
       console.log("Python stderr:", data);
@@ -76,7 +74,7 @@ export default async function handler(
       console.log("Python process closed with code:", code);
       console.log("Final output:", out);
       console.log("Final error:", err);
-      
+
       // Clean up uploaded temp files
       for (const file of inputFiles) {
         try {
@@ -87,22 +85,20 @@ export default async function handler(
       }
 
       if (code !== 0) {
-        return res
-          .status(500)
-          .json({ 
-            error: "Extraction failed", 
-            details: err.slice(0, 500),
-            code: code 
-          });
-      }
-      
-      if (!out || out.trim() === "") {
-        return res.status(500).json({ 
-          error: "No text extracted", 
-          details: "Python script returned empty output" 
+        return res.status(500).json({
+          error: "Extraction failed",
+          details: err.slice(0, 500),
+          code: code,
         });
       }
-      
+
+      if (!out || out.trim() === "") {
+        return res.status(500).json({
+          error: "No text extracted",
+          details: "Python script returned empty output",
+        });
+      }
+
       return res.status(200).json({ text: out });
     });
 
@@ -114,12 +110,11 @@ export default async function handler(
           fs.unlinkSync(file.filepath);
         } catch {}
       }
-      return res.status(500).json({ 
-        error: "Failed to start Python process", 
-        details: error.message 
+      return res.status(500).json({
+        error: "Failed to start Python process",
+        details: error.message,
       });
     });
-
   } catch (e) {
     console.error("API handler error:", e);
     const message = e instanceof Error ? e.message : "Unknown error";

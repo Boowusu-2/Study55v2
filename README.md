@@ -1,13 +1,55 @@
-# SmartStudy - AI-Powered Quiz Generator
+# study.ai - AI-Powered Quiz Generator
 
-Transform your documents into interactive quizzes with AI. SmartStudy extracts text from various document formats and generates personalized quizzes using Google's Gemini AI.
+Transform your documents into interactive quizzes with AI. study.ai extracts text from various document formats and generates personalized quizzes using multiple AI providers (Gemini, OpenAI, Anthropic).
+
+## 🚀 Quick Start
+
+### 1. Setup Environment Variables
+
+Run the interactive setup script:
+
+```bash
+./setup-env.sh
+```
+
+This will prompt you for multiple Gemini API keys (recommended: 2-5 keys for better reliability and automatic rotation).
+
+Or manually create `.env.local` with your API keys (see `env.template` for reference).
+
+### 2. Install Dependencies
+
+```bash
+npm install
+```
+
+### 3. Install OCR Dependencies (Optional)
+
+For image and handwritten text extraction:
+
+```bash
+cd backend
+./install_ocr.sh
+```
+
+This installs EasyOCR and Tesseract for OCR capabilities.
+
+### 4. Start Development Server
+
+```bash
+npm run dev
+```
+
+The application will be available at `http://localhost:3000`
 
 ## 🚀 Features
 
 - **Multi-format Document Support**: PDF, DOCX, DOC, PPTX, PPT, TXT
-- **AI-Powered Quiz Generation**: Uses Google Gemini AI for intelligent question creation
+- **OCR Text Extraction**: Extract text from images, handwritten notes, and scanned documents
+- **AI-Powered Quiz Generation**: Uses Google Gemini 2.0 AI for intelligent question creation
+- **Multiple API Key Support**: Automatic rotation and fallback with up to 5 Gemini API keys
 - **Customizable Quiz Settings**: Difficulty, question count, focus areas
 - **Interactive Quiz Interface**: Beautiful, responsive design with real-time feedback
+- **Progressive Loading**: Immediate feedback and background question generation
 - **Separated Architecture**: FastAPI backend + Next.js frontend for easy deployment
 
 ## 🏗️ Architecture

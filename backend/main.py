@@ -42,13 +42,13 @@ async def health_check():
 async def extract_text(files: List[UploadFile] = File(...)):
     """
     Extract text from uploaded files.
-    Supports: PDF, DOCX, DOC, PPTX, TXT
+    Supports: PDF, DOCX, DOC, PPTX, TXT, Images (JPG, PNG, BMP, TIFF, GIF, WEBP)
     """
     if not files:
         raise HTTPException(status_code=400, detail="No files uploaded")
     
     # Validate file types
-    allowed_extensions = {'.pdf', '.docx', '.doc', '.pptx', '.ppt', '.txt'}
+    allowed_extensions = {'.pdf', '.docx', '.doc', '.pptx', '.ppt', '.txt', '.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif', '.gif', '.webp'}
     for file in files:
         if not file.filename:
             raise HTTPException(status_code=400, detail="Invalid filename")

@@ -1,6 +1,6 @@
-import React, { useCallback, useRef } from 'react';
-import { Upload, X, FileText } from 'lucide-react';
-import { formatFileSize } from '@/utils/helpers';
+import React, { useCallback, useRef } from "react";
+import { Upload, X, FileText, Image, File } from "lucide-react";
+import { formatFileSize } from "@/utils/helpers";
 
 interface FileUploadProps {
   uploadedFiles: File[];
@@ -8,7 +8,11 @@ interface FileUploadProps {
   onRemoveFile: (index: number) => void;
 }
 
-export default function FileUpload({ uploadedFiles, onAddFiles, onRemoveFile }: FileUploadProps) {
+export default function FileUpload({
+  uploadedFiles,
+  onAddFiles,
+  onRemoveFile,
+}: FileUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>): void => {
@@ -16,22 +20,31 @@ export default function FileUpload({ uploadedFiles, onAddFiles, onRemoveFile }: 
     onAddFiles(files);
   };
 
-  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>): void => {
-    e.preventDefault();
-    e.currentTarget.classList.remove("border-blue-400", "bg-blue-50");
-    const files = Array.from(e.dataTransfer.files);
-    onAddFiles(files);
-  }, [onAddFiles]);
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>): void => {
+      e.preventDefault();
+      e.currentTarget.classList.remove("border-blue-400", "bg-blue-50");
+      const files = Array.from(e.dataTransfer.files);
+      onAddFiles(files);
+    },
+    [onAddFiles]
+  );
 
-  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>): void => {
-    e.preventDefault();
-    e.currentTarget.classList.add("border-blue-400", "bg-blue-50/20");
-  }, []);
+  const handleDragOver = useCallback(
+    (e: React.DragEvent<HTMLDivElement>): void => {
+      e.preventDefault();
+      e.currentTarget.classList.add("border-blue-400", "bg-blue-50/20");
+    },
+    []
+  );
 
-  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>): void => {
-    e.preventDefault();
-    e.currentTarget.classList.remove("border-blue-400", "bg-blue-50/20");
-  }, []);
+  const handleDragLeave = useCallback(
+    (e: React.DragEvent<HTMLDivElement>): void => {
+      e.preventDefault();
+      e.currentTarget.classList.remove("border-blue-400", "bg-blue-50/20");
+    },
+    []
+  );
 
   return (
     <section className="bg-white/10 backdrop-blur-lg rounded-3xl p-6 md:p-8 border border-white/20 shadow-2xl">
@@ -54,13 +67,17 @@ export default function FileUpload({ uploadedFiles, onAddFiles, onRemoveFile }: 
           Drop files here or click to browse
         </h3>
         <p className="text-purple-200 text-sm">
-          Supports PDF, DOCX, DOC, PPTX, PPT, TXT files
+          Supports PDF, DOCX, DOC, PPTX, PPT, TXT, and image files (JPG, PNG,
+          etc.)
+        </p>
+        <p className="text-blue-200 text-xs mt-1">
+          Images will be processed with OCR to extract text
         </p>
         <input
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".pdf,.doc,.docx,.ppt,.pptx,.txt"
+          accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.bmp,.tiff,.tif,.gif,.webp"
           onChange={handleFileSelect}
           className="hidden"
         />
@@ -68,29 +85,54 @@ export default function FileUpload({ uploadedFiles, onAddFiles, onRemoveFile }: 
 
       {uploadedFiles.length > 0 && (
         <div className="mt-6">
-          <h3 className="text-lg font-medium text-white mb-4">Uploaded Files</h3>
+          <h3 className="text-lg font-medium text-white mb-4">
+            Uploaded Files
+          </h3>
           <div className="space-y-3">
-            {uploadedFiles.map((file, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-4 bg-white/10 rounded-xl border border-white/20"
-              >
-                <div className="flex items-center gap-3">
-                  <FileText className="w-5 h-5 text-blue-400" />
-                  <div>
-                    <p className="text-white font-medium">{file.name}</p>
-                    <p className="text-purple-200 text-sm">{formatFileSize(file.size)}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => onRemoveFile(index)}
-                  className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors duration-200"
-                  aria-label="Remove file"
+            {uploadedFiles.map((file, index) => {
+              const isImage = file.type.startsWith("image/");
+              const isDocument =
+                file.type.includes("pdf") ||
+                file.type.includes("document") ||
+                file.type.includes("presentation") ||
+                file.type.includes("text");
+
+              return (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-4 bg-white/10 rounded-xl border border-white/20"
                 >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
+                  <div className="flex items-center gap-3">
+                    {isImage ? (
+                      // eslint-disable-next-line jsx-a11y/alt-text
+                      <Image className="w-5 h-5 text-green-400" />
+                    ) : isDocument ? (
+                      <FileText className="w-5 h-5 text-blue-400" />
+                    ) : (
+                      <File className="w-5 h-5 text-purple-400" />
+                    )}
+                    <div>
+                      <p className="text-white font-medium">{file.name}</p>
+                      <p className="text-purple-200 text-sm">
+                        {formatFileSize(file.size)}
+                        {isImage && (
+                          <span className="ml-2 text-green-300 text-xs">
+                            (OCR enabled)
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onRemoveFile(index)}
+                    className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors duration-200"
+                    aria-label="Remove file"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

@@ -1,6 +1,8 @@
 import os
 import traceback
 import sys
+import base64
+from typing import Optional
 
 def read_txt(path: str) -> str:
     """Extract text from TXT files"""
@@ -102,6 +104,112 @@ def read_pptx(path: str) -> str:
         print(f"PPTX_PARSE_ERROR for {path}: {e}", file=sys.stderr)
         return ""
 
+def read_image_with_ocr(path: str) -> str:
+    """Extract text from images using OCR (Optical Character Recognition)"""
+    try:
+        # Try using EasyOCR first (better for handwritten text)
+        try:
+            import easyocr
+            print(f"Using EasyOCR for image: {path}", file=sys.stderr)
+            
+            # Initialize EasyOCR reader (downloads models on first use)
+            reader = easyocr.Reader(['en'], gpu=False)  # Use CPU for compatibility
+            
+            # Read the image
+            results = reader.readtext(path)
+            
+            # Extract text from results
+            text_parts = []
+            for (bbox, text, confidence) in results:
+                if confidence > 0.5:  # Only include text with confidence > 50%
+                    text_parts.append(text)
+                    print(f"OCR detected: '{text}' (confidence: {confidence:.2f})", file=sys.stderr)
+            
+            result = "\n".join(text_parts)
+            print(f"EasyOCR extracted {len(text_parts)} text blocks, {len(result)} characters", file=sys.stderr)
+            return result
+            
+        except ImportError:
+            print("EasyOCR not installed. Trying Tesseract...", file=sys.stderr)
+            
+            # Fallback to Tesseract OCR
+            try:
+                import pytesseract
+                from PIL import Image
+                
+                # Open the image
+                image = Image.open(path)
+                
+                # Extract text using Tesseract
+                text = pytesseract.image_to_string(image)
+                
+                print(f"Tesseract extracted {len(text)} characters", file=sys.stderr)
+                return text.strip()
+                
+            except ImportError:
+                print("Tesseract not available. Install with: pip install pytesseract pillow", file=sys.stderr)
+                return ""
+            except Exception as tesseract_error:
+                print(f"Tesseract OCR error: {tesseract_error}", file=sys.stderr)
+                return ""
+                
+    except Exception as e:
+        print(f"OCR_ERROR for {path}: {e}", file=sys.stderr)
+        print(traceback.format_exc(), file=sys.stderr)
+        return ""
+
+def read_image_with_google_vision(path: str) -> str:
+    """Extract text from images using Google Cloud Vision API (if available)"""
+    try:
+        from google.cloud import vision
+        
+        # Initialize the client
+        client = vision.ImageAnnotatorClient()
+        
+        # Read the image file
+        with open(path, 'rb') as image_file:
+            content = image_file.read()
+        
+        # Create image object
+        image = vision.Image(content=content)
+        
+        # Perform text detection
+        response = client.text_detection(image=image)
+        texts = response.text_annotations
+        
+        if texts:
+            # The first element contains the entire text
+            full_text = texts[0].description
+            print(f"Google Vision extracted {len(full_text)} characters", file=sys.stderr)
+            return full_text
+        else:
+            print("No text detected in image", file=sys.stderr)
+            return ""
+            
+    except ImportError:
+        print("Google Cloud Vision not installed. Install with: pip install google-cloud-vision", file=sys.stderr)
+        return ""
+    except Exception as e:
+        print(f"Google Vision OCR error: {e}", file=sys.stderr)
+        return ""
+
+def extract_text_from_image(path: str) -> str:
+    """Extract text from image files using multiple OCR methods"""
+    print(f"Processing image file: {path}", file=sys.stderr)
+    
+    # Try Google Cloud Vision first (if available and configured)
+    text = read_image_with_google_vision(path)
+    if text and text.strip():
+        return text
+    
+    # Fallback to local OCR methods
+    text = read_image_with_ocr(path)
+    if text and text.strip():
+        return text
+    
+    print(f"No text could be extracted from image: {path}", file=sys.stderr)
+    return ""
+
 def extract_text_from_files(file_paths: list) -> str:
     """
     Extract text from multiple files and return combined text.
@@ -139,6 +247,8 @@ def extract_text_from_files(file_paths: list) -> str:
             text = read_doc(file_path)
         elif ext in [".ppt", ".pptx"]:
             text = read_pptx(file_path)
+        elif ext.lower() in [".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif", ".gif", ".webp"]:
+            text = extract_text_from_image(file_path)
         else:
             print(f"Unsupported file type: {ext}", file=sys.stderr)
             continue

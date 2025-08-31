@@ -1,6 +1,16 @@
-import React, { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { User, Settings, Bell, Shield, LogOut, Edit3, Save, X } from 'lucide-react';
+import React, { useState } from "react";
+import Image from "next/image";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  User,
+  Settings,
+  Bell,
+  Shield,
+  LogOut,
+  Edit3,
+  Save,
+  X,
+} from "lucide-react";
 
 interface UserProfileProps {
   isOpen: boolean;
@@ -11,8 +21,8 @@ export default function UserProfile({ isOpen, onClose }: UserProfileProps) {
   const { user, logout, updateProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
+    name: user?.name || "",
+    email: user?.email || "",
   });
 
   if (!isOpen || !user) return null;
@@ -31,10 +41,10 @@ export default function UserProfile({ isOpen, onClose }: UserProfileProps) {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
@@ -61,7 +71,9 @@ export default function UserProfile({ isOpen, onClose }: UserProfileProps) {
           {/* Profile Section */}
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white">Profile Information</h3>
+              <h3 className="text-lg font-semibold text-white">
+                Profile Information
+              </h3>
               {!isEditing ? (
                 <button
                   onClick={() => setIsEditing(true)}
@@ -93,20 +105,34 @@ export default function UserProfile({ isOpen, onClose }: UserProfileProps) {
             <div className="flex items-center gap-6">
               <div className="w-20 h-20 rounded-full overflow-hidden bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
                 {user.avatar ? (
-                  <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                  <Image
+                    src={user.avatar}
+                    alt={user.name}
+                    width={80}
+                    height={80}
+                    className="w-full h-full object-cover"
+                    unoptimized
+                  />
                 ) : (
                   <User className="w-10 h-10 text-white" />
                 )}
               </div>
-              
+
               <div className="flex-1 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-white/60 mb-1">Full Name</label>
+                  <label className="block text-sm font-medium text-white/60 mb-1">
+                    Full Name
+                  </label>
                   {isEditing ? (
                     <input
                       type="text"
                       value={editData.name}
-                      onChange={(e) => setEditData(prev => ({ ...prev, name: e.target.value }))}
+                      onChange={(e) =>
+                        setEditData((prev) => ({
+                          ...prev,
+                          name: e.target.value,
+                        }))
+                      }
                       className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
                     />
                   ) : (
@@ -115,12 +141,19 @@ export default function UserProfile({ isOpen, onClose }: UserProfileProps) {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-white/60 mb-1">Email Address</label>
+                  <label className="block text-sm font-medium text-white/60 mb-1">
+                    Email Address
+                  </label>
                   {isEditing ? (
                     <input
                       type="email"
                       value={editData.email}
-                      onChange={(e) => setEditData(prev => ({ ...prev, email: e.target.value }))}
+                      onChange={(e) =>
+                        setEditData((prev) => ({
+                          ...prev,
+                          email: e.target.value,
+                        }))
+                      }
                       className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
                     />
                   ) : (
@@ -137,12 +170,16 @@ export default function UserProfile({ isOpen, onClose }: UserProfileProps) {
               <h3 className="text-lg font-semibold text-white">Subscription</h3>
               <div className="p-4 bg-white/5 rounded-xl border border-white/10">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-white font-medium capitalize">{user.subscription.planId} Plan</span>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    user.subscription.status === 'active' 
-                      ? 'bg-green-500/20 text-green-200' 
-                      : 'bg-red-500/20 text-red-200'
-                  }`}>
+                  <span className="text-white font-medium capitalize">
+                    {user.subscription.planId} Plan
+                  </span>
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      user.subscription.status === "active"
+                        ? "bg-green-500/20 text-green-200"
+                        : "bg-red-500/20 text-red-200"
+                    }`}
+                  >
                     {user.subscription.status}
                   </span>
                 </div>
@@ -156,22 +193,32 @@ export default function UserProfile({ isOpen, onClose }: UserProfileProps) {
 
           {/* Statistics Section */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-white">Your Statistics</h3>
+            <h3 className="text-lg font-semibold text-white">
+              Your Statistics
+            </h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-                <p className="text-2xl font-bold text-white">{user.stats.totalQuizzes}</p>
+                <p className="text-2xl font-bold text-white">
+                  {user.stats.totalQuizzes}
+                </p>
                 <p className="text-sm text-white/60">Total Quizzes</p>
               </div>
               <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-                <p className="text-2xl font-bold text-white">{user.stats.totalQuestions}</p>
+                <p className="text-2xl font-bold text-white">
+                  {user.stats.totalQuestions}
+                </p>
                 <p className="text-sm text-white/60">Questions Answered</p>
               </div>
               <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-                <p className="text-2xl font-bold text-white">{user.stats.averageScore}%</p>
+                <p className="text-2xl font-bold text-white">
+                  {user.stats.averageScore}%
+                </p>
                 <p className="text-sm text-white/60">Average Score</p>
               </div>
               <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-                <p className="text-2xl font-bold text-white">{user.stats.studyStreak}</p>
+                <p className="text-2xl font-bold text-white">
+                  {user.stats.studyStreak}
+                </p>
                 <p className="text-sm text-white/60">Day Streak</p>
               </div>
             </div>
@@ -179,7 +226,9 @@ export default function UserProfile({ isOpen, onClose }: UserProfileProps) {
 
           {/* Account Info */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-white">Account Information</h3>
+            <h3 className="text-lg font-semibold text-white">
+              Account Information
+            </h3>
             <div className="space-y-3 text-sm text-white/60">
               <div className="flex justify-between">
                 <span>Member since:</span>
@@ -187,7 +236,9 @@ export default function UserProfile({ isOpen, onClose }: UserProfileProps) {
               </div>
               <div className="flex justify-between">
                 <span>Last login:</span>
-                <span className="text-white">{formatDate(user.lastLoginAt)}</span>
+                <span className="text-white">
+                  {formatDate(user.lastLoginAt)}
+                </span>
               </div>
             </div>
           </div>

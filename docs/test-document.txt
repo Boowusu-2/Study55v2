@@ -1,0 +1,23 @@
+Introduction to Machine Learning
+
+Machine learning is a subset of artificial intelligence that enables computers to learn and make decisions from data without being explicitly programmed.
+
+Key Concepts:
+1. Supervised Learning: Learning from labeled data
+2. Unsupervised Learning: Finding patterns in unlabeled data
+3. Reinforcement Learning: Learning through trial and error
+
+Applications:
+- Image recognition
+- Natural language processing
+- Recommendation systems
+- Autonomous vehicles
+
+The machine learning process involves:
+1. Data collection and preprocessing
+2. Feature engineering
+3. Model selection and training
+4. Evaluation and validation
+5. Deployment and monitoring
+
+This is a test document to verify that the text extraction functionality is working properly.

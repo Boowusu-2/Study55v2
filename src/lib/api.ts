@@ -1,31 +1,27 @@
-import { QuizData, GeminiResponse, QuizQuestion } from "@/types";
+import { QuizData, QuizQuestion } from "@/types";
 
 // Retry configuration
 const MAX_RETRIES = 3;
 const BASE_DELAY = 1000; // 1 second
 
-// Gemini model configurations
-const GEMINI_MODELS = {
-  GEMINI_1_5_FLASH: {
-    name: "gemini-1.5-flash",
-    url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+// AI Provider configurations - Only Gemini for now
+const AI_PROVIDERS = {
+  // Gemini models (Google) - Updated to Gemini 2.0
+  GEMINI_2_0_FLASH: {
+    name: "gemini-2.0-flash",
+    provider: "gemini",
+    url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
     maxTokens: 4096,
     temperature: 0.7,
     priority: 1, // Highest priority - fastest
   },
   GEMINI_1_5_PRO: {
     name: "gemini-1.5-pro",
+    provider: "gemini",
     url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent",
     maxTokens: 8192,
     temperature: 0.7,
     priority: 2, // Medium priority - more capable
-  },
-  GEMINI_1_0_PRO: {
-    name: "gemini-1.0-pro",
-    url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent",
-    maxTokens: 3072,
-    temperature: 0.7,
-    priority: 3, // Lower priority - fallback
   },
 };
 
@@ -37,71 +33,147 @@ const getBackoffDelay = (attempt: number): number => {
   return BASE_DELAY * Math.pow(2, attempt);
 };
 
-// Try different models with fallback
-async function tryGeminiModels(
-  prompt: string,
-  apiKey: string,
-  selectedModel: string = "auto",
-  retryCount: number = 0
-): Promise<QuizData> {
-  let models;
-
-  if (selectedModel === "auto") {
-    // Use all models in priority order
-    models = Object.values(GEMINI_MODELS).sort(
-      (a, b) => a.priority - b.priority
-    );
-  } else {
-    // Use specific model
-    const model = Object.values(GEMINI_MODELS).find(
-      (m) => m.name === selectedModel
-    );
-    models = model
-      ? [model]
-      : Object.values(GEMINI_MODELS).sort((a, b) => a.priority - b.priority);
-  }
-
-  for (const model of models) {
-    try {
-      console.log(`Trying model: ${model.name}`);
-      const result = await callGeminiAPIWithModel(
-        prompt,
-        apiKey,
-        model,
-        retryCount
-      );
-      if (result) {
-        console.log(`Success with model: ${model.name}`);
-        return result;
-      }
-    } catch (error) {
-      console.warn(`Model ${model.name} failed:`, error);
-      continue;
-    }
-  }
-
-  // If all models fail, return fallback
-  console.warn("All Gemini models failed, using fallback quiz");
-  return createFallbackQuiz();
-}
-
-interface GeminiModel {
+interface AIModel {
   name: string;
+  provider: string;
   url: string;
   maxTokens: number;
   temperature: number;
   priority: number;
 }
 
-async function callGeminiAPIWithModel(
+// Get multiple Gemini API keys from environment
+export function getGeminiApiKeys(): string[] {
+  const keys: string[] = [];
+  for (let i = 1; i <= 5; i++) {
+    const key = process.env[`GEMINI_API_KEY_${i}`];
+    if (key && key.trim()) {
+      keys.push(key.trim());
+    }
+  }
+  return keys;
+}
+
+// API key rotation with round-robin
+// let currentKeyIndex = 0;
+// function getNextApiKey(apiKeys: string[]): string {
+//   if (apiKeys.length === 0) return "";
+//   const key = apiKeys[currentKeyIndex];
+//   currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
+//   return key;
+// }
+
+// Try Gemini models only with multiple API keys
+async function tryAIProviders(
   prompt: string,
-  apiKey: string,
-  model: GeminiModel,
+  apiKeys: { gemini?: string; openai?: string; anthropic?: string },
+  selectedModel: string = "auto",
+  retryCount: number = 0
+): Promise<QuizData> {
+  let models: AIModel[] = [];
+
+  if (selectedModel === "auto") {
+    // Use only Gemini models in priority order
+    models = Object.values(AI_PROVIDERS)
+      .filter((model) => model.provider === "gemini")
+      .sort((a, b) => a.priority - b.priority);
+  } else {
+    // Use specific Gemini model if available
+    const model = Object.values(AI_PROVIDERS).find(
+      (m) => m.name === selectedModel && m.provider === "gemini"
+    );
+    if (model) {
+      models = [model];
+    }
+
+    // Fallback to available Gemini models if specific model not found
+    if (models.length === 0) {
+      models = Object.values(AI_PROVIDERS)
+        .filter((model) => model.provider === "gemini")
+        .sort((a, b) => a.priority - b.priority);
+    }
+  }
+
+  // Get all available Gemini API keys
+  const geminiKeys = getGeminiApiKeys();
+  if (geminiKeys.length === 0) {
+    console.warn("No Gemini API keys configured");
+    return { questions: [] };
+  }
+
+  for (const model of models) {
+    // Try each API key for this model
+    for (let keyIndex = 0; keyIndex < geminiKeys.length; keyIndex++) {
+      const apiKey = geminiKeys[keyIndex];
+      try {
+        console.log(
+          `Trying ${model.provider} model: ${model.name} with key ${
+            keyIndex + 1
+          }`
+        );
+        const result = await callAIProvider(
+          prompt,
+          { gemini: apiKey },
+          model,
+          retryCount
+        );
+        if (result) {
+          console.log(
+            `Success with ${model.provider} model: ${model.name} using key ${
+              keyIndex + 1
+            }`
+          );
+          return result;
+        }
+      } catch (error) {
+        console.warn(
+          `Gemini model ${model.name} with key ${keyIndex + 1} failed:`,
+          error
+        );
+
+        // If it's a quota error, skip this key
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        if (
+          errorMessage.includes("quota") ||
+          errorMessage.includes("insufficient_quota")
+        ) {
+          console.warn(`Skipping key ${keyIndex + 1} due to quota issues`);
+          continue;
+        }
+
+        // For other errors, continue to next key
+        continue;
+      }
+    }
+  }
+
+  // If all Gemini models and keys fail, return empty quiz (no fallback)
+  console.warn(
+    "All Gemini models and API keys failed - no questions generated"
+  );
+  return {
+    questions: [],
+  };
+}
+
+async function callAIProvider(
+  prompt: string,
+  apiKeys: { gemini?: string; openai?: string; anthropic?: string },
+  model: AIModel,
   retryCount: number = 0
 ): Promise<QuizData | null> {
-  const url = `${model.url}?key=${apiKey}`;
+  const apiKey = apiKeys.gemini;
+  if (!apiKey) {
+    console.warn("No Gemini API key provided");
+    return null;
+  }
 
   try {
+    let generatedText = "";
+
+    // Only Gemini API call
+    const url = `${model.url}?key=${apiKey}`;
     const response = await fetch(url, {
       method: "POST",
       headers: {
@@ -120,6 +192,11 @@ async function callGeminiAPIWithModel(
       }),
     });
 
+    if (response.ok) {
+      const data = await response.json();
+      generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    }
+
     if (!response.ok) {
       let errorDetails = "";
       try {
@@ -128,29 +205,48 @@ async function callGeminiAPIWithModel(
       } catch {}
 
       console.warn(
-        `Gemini API (${model.name}) HTTP ${response.status} ${response.statusText}:`,
+        `GEMINI API (${model.name}) HTTP ${response.status} ${response.statusText}:`,
         errorDetails
       );
 
-      // Handle specific error cases
-      if (response.status === 503 && retryCount < MAX_RETRIES) {
-        console.log(
-          `API overloaded, retrying in ${getBackoffDelay(
-            retryCount
-          )}ms... (attempt ${retryCount + 1}/${MAX_RETRIES})`
+      // Check for quota/rate limit errors
+      const isQuotaError =
+        response.status === 429 ||
+        (response.status === 400 && errorDetails.includes("quota")) ||
+        (response.status === 400 &&
+          errorDetails.includes("insufficient_quota")) ||
+        (response.status === 400 &&
+          errorDetails.includes("RESOURCE_EXHAUSTED"));
+
+      // For quota errors, don't retry - move to next model immediately
+      if (isQuotaError) {
+        console.warn(
+          `Gemini ${model.name} quota exceeded, skipping to next model`
         );
-        await sleep(getBackoffDelay(retryCount));
-        return callGeminiAPIWithModel(prompt, apiKey, model, retryCount + 1);
+        return null;
       }
 
-      // If we've exhausted retries or it's a different error, return null to try next model
+      // Retry on rate limits or server errors (but not quota errors)
+      if (
+        (response.status === 429 || response.status >= 500) &&
+        retryCount < MAX_RETRIES
+      ) {
+        console.log(
+          `Retrying ${model.name} in ${getBackoffDelay(retryCount)}ms...`
+        );
+        await sleep(getBackoffDelay(retryCount));
+        return callAIProvider(prompt, apiKeys, model, retryCount + 1);
+      }
+
       return null;
     }
 
-    const data: GeminiResponse = await response.json();
-    const generatedText =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    if (!generatedText) {
+      console.warn(`No text generated by ${model.name}`);
+      return null;
+    }
 
+    // Try to parse JSON response
     try {
       // Clean up the response text
       const cleanedText = generatedText
@@ -161,29 +257,34 @@ async function callGeminiAPIWithModel(
       if (cleanedText.length === 0) {
         throw new Error("Empty model output");
       }
-      return JSON.parse(cleanedText);
+
+      const quizData = JSON.parse(cleanedText);
+      if (quizData.questions && Array.isArray(quizData.questions)) {
+        return quizData;
+      }
     } catch (parseError) {
       console.warn(
         `Generated text from ${model.name} is not valid JSON:`,
         parseError
       );
-      return null; // Try next model
     }
+
+    return null;
   } catch (error) {
-    console.error(`Gemini API Error (${model.name}):`, error);
+    console.error(`GEMINI API Error (${model.name}):`, error);
 
     // Retry on network errors
     if (retryCount < MAX_RETRIES) {
       console.log(
-        `Network error, retrying in ${getBackoffDelay(
+        `Retrying ${model.name} due to network error in ${getBackoffDelay(
           retryCount
-        )}ms... (attempt ${retryCount + 1}/${MAX_RETRIES})`
+        )}ms...`
       );
       await sleep(getBackoffDelay(retryCount));
-      return callGeminiAPIWithModel(prompt, apiKey, model, retryCount + 1);
+      return callAIProvider(prompt, apiKeys, model, retryCount + 1);
     }
 
-    return null; // Try next model
+    return null;
   }
 }
 
@@ -193,23 +294,28 @@ export async function callGeminiAPI(
   selectedModel: string = "auto",
   retryCount: number = 0
 ): Promise<QuizData> {
-  return tryGeminiModels(prompt, apiKey, selectedModel, retryCount);
+  return tryAIProviders(prompt, { gemini: apiKey }, selectedModel, retryCount);
 }
 
 // Helper function to chunk content for diverse questions
-function chunkContent(content: string, batchNumber: number, totalBatches: number): string {
+function chunkContent(
+  content: string,
+  batchNumber: number,
+  totalBatches: number
+): string {
   const contentLength = content.length;
   const chunkSize = Math.floor(contentLength / totalBatches);
   const startIndex = (batchNumber - 1) * chunkSize;
-  const endIndex = batchNumber === totalBatches ? contentLength : startIndex + chunkSize;
-  
+  const endIndex =
+    batchNumber === totalBatches ? contentLength : startIndex + chunkSize;
+
   // Add some overlap to ensure context continuity
   const overlap = Math.floor(chunkSize * 0.1); // 10% overlap
   const actualStart = Math.max(0, startIndex - overlap);
   const actualEnd = Math.min(contentLength, endIndex + overlap);
-  
+
   const chunk = content.substring(actualStart, actualEnd);
-  
+
   // Add context about which part of the document this is
   return `[Section ${batchNumber} of ${totalBatches}] ${chunk}`;
 }
@@ -221,7 +327,7 @@ export async function callGeminiAPIWithSplitting(
   difficulty: string,
   questionType: string,
   focusArea: string,
-  apiKey: string,
+  apiKeys: { gemini?: string; openai?: string; anthropic?: string },
   selectedModel: string = "auto",
   onProgress?: (message: string, current: number, total: number) => void
 ): Promise<QuizData> {
@@ -234,7 +340,7 @@ export async function callGeminiAPIWithSplitting(
       difficulty,
       questionType,
       focusArea,
-      apiKey,
+      apiKeys,
       selectedModel
     );
   }
@@ -278,7 +384,7 @@ export async function callGeminiAPIWithSplitting(
           difficulty,
           questionType,
           focusArea,
-          apiKey,
+          apiKeys,
           selectedModel
         );
 
@@ -311,11 +417,11 @@ export async function callGeminiAPIWithSplitting(
           console.error(
             `Batch ${batchNumber} failed after ${maxRetries} attempts`
           );
-          // Create fallback questions for this batch
-          const fallbackQuestions = createFallbackQuestionsForBatch(
-            currentBatchSize
+          // Don't create fallback questions - just skip this batch
+          // This preserves any successfully generated questions from previous batches
+          console.log(
+            `Skipping batch ${batchNumber} - will use available questions`
           );
-          allQuestions.push(...fallbackQuestions);
         } else {
           // Wait before retry with exponential backoff
           const delay = Math.pow(2, retryCount) * 1000;
@@ -334,10 +440,25 @@ export async function callGeminiAPIWithSplitting(
   // Deduplicate questions to ensure no repeats
   const uniqueQuestions = deduplicateQuestions(allQuestions);
   const finalQuestions = uniqueQuestions.slice(0, questionCount);
-  
+
   console.log(
-    `Total questions generated: ${finalQuestions.length}/${questionCount} (${allQuestions.length - uniqueQuestions.length} duplicates removed)`
+    `Total questions generated: ${finalQuestions.length}/${questionCount} (${
+      allQuestions.length - uniqueQuestions.length
+    } duplicates removed)`
   );
+
+  // Only use fallback if no questions were generated at all
+  if (finalQuestions.length === 0) {
+    console.warn("No questions generated from any batch, using fallback quiz");
+    const fallbackQuiz = createFallbackQuiz(questionCount);
+    onProgress?.(
+      `Using fallback questions due to API failures. Generated ${fallbackQuiz.questions.length} questions.`,
+      fallbackQuiz.questions.length,
+      questionCount
+    );
+    return fallbackQuiz;
+  }
+
   onProgress?.(
     `Quiz generation complete! Created ${finalQuestions.length} unique questions.`,
     finalQuestions.length,
@@ -356,7 +477,7 @@ function callGeminiAPIWithPrompt(
   difficulty: string,
   questionType: string,
   focusArea: string,
-  apiKey: string,
+  apiKeys: { gemini?: string; openai?: string; anthropic?: string },
   selectedModel: string = "auto"
 ): Promise<QuizData> {
   // Truncate content if it's too long to avoid token limits
@@ -392,159 +513,122 @@ IMPORTANT: Return ONLY valid JSON with this exact structure, no additional text:
 
 Content: ${truncatedContent}`;
 
-  return callGeminiAPI(prompt, apiKey, selectedModel);
+  return tryAIProviders(prompt, apiKeys, selectedModel);
 }
 
-export function createFallbackQuiz(): QuizData {
-  return {
-    questions: [
-      {
-        question:
-          "What is the main concept discussed in the uploaded document?",
-        options: ["Concept A", "Concept B", "Concept C", "Concept D"],
-        correct: 0,
-        explanation:
-          "Based on your document, Concept A is the primary focus as mentioned throughout the text.",
-      },
-      {
-        question: "Which key benefit is highlighted in the material?",
-        options: [
-          "Efficiency",
-          "Cost reduction",
-          "User satisfaction",
-          "All of the above",
-        ],
-        correct: 3,
-        explanation:
-          "The document emphasizes multiple interconnected benefits for comprehensive understanding.",
-      },
-      {
-        question: "According to the material, what approach is recommended?",
-        options: [
-          "Traditional method",
-          "Modern approach",
-          "Hybrid solution",
-          "Case-by-case basis",
-        ],
-        correct: 2,
-        explanation:
-          "The document suggests that a hybrid approach combining multiple strategies yields the best results.",
-      },
-    ],
-  };
+export function createFallbackQuiz(questionCount: number = 10): QuizData {
+  const baseQuestions = [
+    {
+      question: "What is the main concept discussed in the uploaded document?",
+      options: ["Concept A", "Concept B", "Concept C", "Concept D"],
+      correct: 0,
+      explanation:
+        "Based on your document, Concept A is the primary focus as mentioned throughout the text.",
+    },
+    {
+      question: "Which key benefit is highlighted in the material?",
+      options: [
+        "Efficiency",
+        "Cost reduction",
+        "User satisfaction",
+        "All of the above",
+      ],
+      correct: 3,
+      explanation:
+        "The document emphasizes multiple interconnected benefits for comprehensive understanding.",
+    },
+    {
+      question: "According to the material, what approach is recommended?",
+      options: [
+        "Traditional method",
+        "Modern approach",
+        "Hybrid solution",
+        "Case-by-case basis",
+      ],
+      correct: 2,
+      explanation:
+        "The document suggests that a hybrid approach combining multiple strategies yields the best results.",
+    },
+    {
+      question: "What is the primary objective mentioned in the document?",
+      options: ["Objective A", "Objective B", "Objective C", "Objective D"],
+      correct: 1,
+      explanation: "The document clearly states Objective B as the main goal.",
+    },
+    {
+      question: "Which methodology is described in the material?",
+      options: ["Method A", "Method B", "Method C", "Method D"],
+      correct: 0,
+      explanation:
+        "Method A is outlined as the primary methodology in the document.",
+    },
+    {
+      question: "What challenge is identified in the document?",
+      options: ["Challenge A", "Challenge B", "Challenge C", "Challenge D"],
+      correct: 2,
+      explanation:
+        "The document highlights Challenge C as a significant obstacle.",
+    },
+    {
+      question:
+        "Which factor is crucial for success according to the material?",
+      options: ["Factor A", "Factor B", "Factor C", "Factor D"],
+      correct: 1,
+      explanation: "Factor B is emphasized as essential for achieving success.",
+    },
+    {
+      question: "What outcome is expected from following the guidelines?",
+      options: ["Outcome A", "Outcome B", "Outcome C", "Outcome D"],
+      correct: 3,
+      explanation:
+        "Outcome D represents the expected result of following the guidelines.",
+    },
+    {
+      question: "Which principle underlies the main concepts?",
+      options: ["Principle A", "Principle B", "Principle C", "Principle D"],
+      correct: 0,
+      explanation:
+        "Principle A forms the foundation of the main concepts discussed.",
+    },
+    {
+      question: "What strategy is recommended for implementation?",
+      options: ["Strategy A", "Strategy B", "Strategy C", "Strategy D"],
+      correct: 2,
+      explanation: "Strategy C is recommended as the most effective approach.",
+    },
+  ];
+
+  // Generate the requested number of questions by cycling through base questions
+  const questions = [];
+  for (let i = 0; i < questionCount; i++) {
+    const baseQuestion = baseQuestions[i % baseQuestions.length];
+    questions.push({
+      ...baseQuestion,
+      question: `${baseQuestion.question} (Question ${i + 1})`,
+    });
+  }
+
+  return { questions };
 }
 
 // Helper function to deduplicate questions
 function deduplicateQuestions(questions: QuizQuestion[]): QuizQuestion[] {
   const seen = new Set<string>();
   const unique: QuizQuestion[] = [];
-  
+
   for (const question of questions) {
     // Create a normalized version of the question for comparison
-    const normalized = question.question.toLowerCase()
-      .replace(/[^\w\s]/g, '') // Remove punctuation
-      .replace(/\s+/g, ' ') // Normalize whitespace
+    const normalized = question.question
+      .toLowerCase()
+      .replace(/[^\w\s]/g, "") // Remove punctuation
+      .replace(/\s+/g, " ") // Normalize whitespace
       .trim();
-    
+
     if (!seen.has(normalized)) {
       seen.add(normalized);
       unique.push(question);
     }
   }
-  
+
   return unique;
-}
-
-// Helper function to create fallback questions for failed batches
-function createFallbackQuestionsForBatch(
-  count: number
-): QuizQuestion[] {
-  const questions: QuizQuestion[] = [];
-  const baseQuestions = [
-    {
-      question: "What is the main topic discussed in the document?",
-      options: ["Topic A", "Topic B", "Topic C", "Topic D"],
-      correct: 0,
-      explanation:
-        "Based on the document content, Topic A is the primary focus.",
-    },
-    {
-      question: "Which concept is most important according to the material?",
-      options: ["Concept A", "Concept B", "Concept C", "Concept D"],
-      correct: 1,
-      explanation:
-        "The document emphasizes Concept B as the most critical element.",
-    },
-    {
-      question: "What approach is recommended in the text?",
-      options: ["Traditional", "Modern", "Hybrid", "Experimental"],
-      correct: 2,
-      explanation:
-        "The document suggests a hybrid approach for optimal results.",
-    },
-    {
-      question: "Which benefit is highlighted most prominently?",
-      options: [
-        "Efficiency",
-        "Cost savings",
-        "User experience",
-        "All of the above",
-      ],
-      correct: 3,
-      explanation: "The document mentions multiple interconnected benefits.",
-    },
-    {
-      question: "What is the key takeaway from this material?",
-      options: [
-        "Process improvement",
-        "Technology adoption",
-        "Strategic planning",
-        "All of the above",
-      ],
-      correct: 3,
-      explanation: "The document covers multiple aspects that work together.",
-    },
-    {
-      question: "What methodology is described in the document?",
-      options: ["Method A", "Method B", "Method C", "Method D"],
-      correct: 0,
-      explanation: "The document outlines Method A as the primary methodology.",
-    },
-    {
-      question: "Which factor is identified as crucial for success?",
-      options: ["Factor A", "Factor B", "Factor C", "Factor D"],
-      correct: 1,
-      explanation: "Factor B is highlighted as essential for achieving success.",
-    },
-    {
-      question: "What challenge is mentioned in the material?",
-      options: ["Challenge A", "Challenge B", "Challenge C", "Challenge D"],
-      correct: 2,
-      explanation: "The document identifies Challenge C as a significant obstacle.",
-    },
-    {
-      question: "Which outcome is expected from following the guidelines?",
-      options: ["Outcome A", "Outcome B", "Outcome C", "Outcome D"],
-      correct: 3,
-      explanation: "Outcome D represents the expected result of following the guidelines.",
-    },
-    {
-      question: "What principle underlies the main concepts?",
-      options: ["Principle A", "Principle B", "Principle C", "Principle D"],
-      correct: 0,
-      explanation: "Principle A forms the foundation of the main concepts discussed.",
-    },
-  ];
-
-  for (let i = 0; i < count; i++) {
-    const baseQuestion = baseQuestions[i % baseQuestions.length];
-    questions.push({
-      ...baseQuestion,
-      question: `${baseQuestion.question} (Batch ${
-        Math.floor(i / baseQuestions.length) + 1
-      })`,
-    });
-  }
-
-  return questions;
 }

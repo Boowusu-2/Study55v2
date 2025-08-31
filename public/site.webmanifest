@@ -1,0 +1,21 @@
+{
+  "name": "study.ai - AI-Powered Quiz Generator",
+  "short_name": "study.ai",
+  "description": "Transform your documents and images into interactive quizzes powered by AI",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#8b5cf6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/next.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "productivity", "utilities"],
+  "lang": "en",
+  "dir": "ltr"
+}

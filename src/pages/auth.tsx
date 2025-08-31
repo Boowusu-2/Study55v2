@@ -1,21 +1,27 @@
-import React, { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import LoginForm from '@/components/LoginForm';
-import RegisterForm from '@/components/RegisterForm';
-import ForgotPasswordForm from '@/components/ForgotPasswordForm';
-import { Brain, BookOpen, Target, Zap } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/router";
+import { useAuth } from "@/contexts/AuthContext";
+import LoginForm from "@/components/LoginForm";
+import RegisterForm from "@/components/RegisterForm";
+import ForgotPasswordForm from "@/components/ForgotPasswordForm";
+import { Brain, BookOpen, Target, Zap } from "lucide-react";
 
-type AuthMode = 'login' | 'register' | 'forgot-password';
+type AuthMode = "login" | "register" | "forgot-password";
 
 export default function AuthPage() {
   const { isAuthenticated, isLoading } = useAuth();
-  const [authMode, setAuthMode] = useState<AuthMode>('login');
+  const [authMode, setAuthMode] = useState<AuthMode>("login");
+
+  const router = useRouter();
 
   // Redirect if already authenticated
-  if (isAuthenticated) {
-    if (typeof window !== 'undefined') {
-      window.location.href = '/';
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push("/");
     }
+  }, [isAuthenticated, router]);
+
+  if (isAuthenticated) {
     return null;
   }
 
@@ -33,24 +39,18 @@ export default function AuthPage() {
 
   const renderAuthForm = () => {
     switch (authMode) {
-      case 'login':
+      case "login":
         return (
           <LoginForm
-            onSwitchToRegister={() => setAuthMode('register')}
-            onSwitchToForgotPassword={() => setAuthMode('forgot-password')}
+            onSwitchToRegister={() => setAuthMode("register")}
+            onSwitchToForgotPassword={() => setAuthMode("forgot-password")}
           />
         );
-      case 'register':
+      case "register":
+        return <RegisterForm onSwitchToLogin={() => setAuthMode("login")} />;
+      case "forgot-password":
         return (
-          <RegisterForm
-            onSwitchToLogin={() => setAuthMode('login')}
-          />
-        );
-      case 'forgot-password':
-        return (
-          <ForgotPasswordForm
-            onSwitchToLogin={() => setAuthMode('login')}
-          />
+          <ForgotPasswordForm onSwitchToLogin={() => setAuthMode("login")} />
         );
       default:
         return null;
@@ -68,13 +68,14 @@ export default function AuthPage() {
             </div>
             <h1 className="text-3xl font-bold text-white">SmartStudy</h1>
           </div>
-          
+
           <h2 className="text-4xl font-bold text-white mb-6">
             Transform Your Learning Experience
           </h2>
-          
+
           <p className="text-purple-200 text-lg mb-12">
-            Upload your study materials and let AI create personalized quizzes to help you master any subject.
+            Upload your study materials and let AI create personalized quizzes
+            to help you master any subject.
           </p>
 
           <div className="space-y-6">
@@ -83,9 +84,12 @@ export default function AuthPage() {
                 <BookOpen className="w-5 h-5 text-purple-400" />
               </div>
               <div>
-                <h3 className="text-white font-semibold mb-1">Smart Content Analysis</h3>
+                <h3 className="text-white font-semibold mb-1">
+                  Smart Content Analysis
+                </h3>
                 <p className="text-purple-200 text-sm">
-                  AI analyzes your documents and creates relevant, challenging questions
+                  AI analyzes your documents and creates relevant, challenging
+                  questions
                 </p>
               </div>
             </div>
@@ -95,9 +99,12 @@ export default function AuthPage() {
                 <Target className="w-5 h-5 text-blue-400" />
               </div>
               <div>
-                <h3 className="text-white font-semibold mb-1">Personalized Learning</h3>
+                <h3 className="text-white font-semibold mb-1">
+                  Personalized Learning
+                </h3>
                 <p className="text-purple-200 text-sm">
-                  Track your progress and get questions tailored to your learning style
+                  Track your progress and get questions tailored to your
+                  learning style
                 </p>
               </div>
             </div>
@@ -107,9 +114,12 @@ export default function AuthPage() {
                 <Zap className="w-5 h-5 text-pink-400" />
               </div>
               <div>
-                <h3 className="text-white font-semibold mb-1">Instant Feedback</h3>
+                <h3 className="text-white font-semibold mb-1">
+                  Instant Feedback
+                </h3>
                 <p className="text-purple-200 text-sm">
-                  Get detailed explanations and learn from your mistakes immediately
+                  Get detailed explanations and learn from your mistakes
+                  immediately
                 </p>
               </div>
             </div>
@@ -117,7 +127,9 @@ export default function AuthPage() {
 
           <div className="mt-12 p-6 bg-white/10 rounded-2xl border border-white/20">
             <p className="text-white/80 text-sm italic">
-              &ldquo;SmartStudy has completely transformed how I prepare for exams. The AI-generated questions are incredibly relevant and help me understand concepts better.&rdquo;
+              &ldquo;SmartStudy has completely transformed how I prepare for
+              exams. The AI-generated questions are incredibly relevant and help
+              me understand concepts better.&rdquo;
             </p>
             <div className="flex items-center gap-3 mt-4">
               <div className="w-8 h-8 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full"></div>
@@ -149,12 +161,18 @@ export default function AuthPage() {
           {/* Footer */}
           <div className="text-center mt-8">
             <p className="text-white/40 text-sm">
-              By continuing, you agree to our{' '}
-              <a href="#" className="text-purple-300 hover:text-white transition-colors">
+              By continuing, you agree to our{" "}
+              <a
+                href="#"
+                className="text-purple-300 hover:text-white transition-colors"
+              >
                 Terms of Service
-              </a>{' '}
-              and{' '}
-              <a href="#" className="text-purple-300 hover:text-white transition-colors">
+              </a>{" "}
+              and{" "}
+              <a
+                href="#"
+                className="text-purple-300 hover:text-white transition-colors"
+              >
                 Privacy Policy
               </a>
             </p>
