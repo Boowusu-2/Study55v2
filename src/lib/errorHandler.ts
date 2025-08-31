@@ -12,7 +12,9 @@ class ErrorHandler {
   private isEnabled: boolean = true;
 
   constructor() {
-    this.setupGlobalErrorHandling();
+    if (typeof window !== 'undefined') {
+      this.setupGlobalErrorHandling();
+    }
   }
 
   private setupGlobalErrorHandling() {
@@ -78,7 +80,9 @@ class ErrorHandler {
     if (this.errors.length > 50) {
       this.errors = this.errors.slice(-50);
     }
-    localStorage.setItem("studyai_errors", JSON.stringify(this.errors));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("studyai_errors", JSON.stringify(this.errors));
+    }
   }
 }
 
