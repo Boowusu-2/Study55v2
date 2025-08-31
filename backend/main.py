@@ -264,9 +264,22 @@ Remember: Base your questions on the ACTUAL content provided above, not generic 
                     generated_text = result["candidates"][0]["content"]["parts"][0]["text"]
                     print(f"AI Response from {model}: {generated_text[:200]}...")
                     
-                    # Try to parse JSON
+                    # Try to parse JSON (handle markdown code blocks)
                     try:
-                        quiz_data = json.loads(generated_text)
+                        # Extract JSON from markdown code blocks if present
+                        cleaned_text = generated_text
+                        if "```json" in generated_text:
+                            start = generated_text.find("```json") + 7
+                            end = generated_text.find("```", start)
+                            if end != -1:
+                                cleaned_text = generated_text[start:end].strip()
+                        elif "```" in generated_text:
+                            start = generated_text.find("```") + 3
+                            end = generated_text.find("```", start)
+                            if end != -1:
+                                cleaned_text = generated_text[start:end].strip()
+                        
+                        quiz_data = json.loads(cleaned_text)
                         if quiz_data.get("questions") and len(quiz_data["questions"]) > 0:
                             print(f"Successfully parsed AI response from {model}: {len(quiz_data.get('questions', []))} questions")
                             ai_success = True
@@ -276,6 +289,7 @@ Remember: Base your questions on the ACTUAL content provided above, not generic 
                     except json.JSONDecodeError as e:
                         print(f"JSON parsing failed for {model}: {e}")
                         print(f"Raw AI response from {model}: {generated_text}")
+                        print(f"Cleaned text: {cleaned_text}")
                 else:
                     print(f"AI service error for {model}: {response.status_code} - {response.text}")
                     
@@ -429,9 +443,22 @@ Return a simple JSON response with guidance.
                     generated_text = result["candidates"][0]["content"]["parts"][0]["text"]
                     print(f"AI Learning Response from {model}: {generated_text[:200]}...")
                     
-                    # Try to parse JSON
+                    # Try to parse JSON (handle markdown code blocks)
                     try:
-                        learning_data = json.loads(generated_text)
+                        # Extract JSON from markdown code blocks if present
+                        cleaned_text = generated_text
+                        if "```json" in generated_text:
+                            start = generated_text.find("```json") + 7
+                            end = generated_text.find("```", start)
+                            if end != -1:
+                                cleaned_text = generated_text[start:end].strip()
+                        elif "```" in generated_text:
+                            start = generated_text.find("```") + 3
+                            end = generated_text.find("```", start)
+                            if end != -1:
+                                cleaned_text = generated_text[start:end].strip()
+                        
+                        learning_data = json.loads(cleaned_text)
                         if learning_data.get("learningSteps") and len(learning_data["learningSteps"]) > 0:
                             print(f"Successfully parsed AI learning response from {model}: {len(learning_data.get('learningSteps', []))} steps")
                             ai_success = True
@@ -441,6 +468,7 @@ Return a simple JSON response with guidance.
                     except json.JSONDecodeError as e:
                         print(f"Learning JSON parsing failed for {model}: {e}")
                         print(f"Raw AI learning response from {model}: {generated_text}")
+                        print(f"Cleaned text: {cleaned_text}")
                 else:
                     print(f"AI service error for learning {model}: {response.status_code} - {response.text}")
                     
