@@ -35,7 +35,7 @@ export default function CustomSelect({
     if (onOpenChange) {
       onOpenChange(isOpen);
     }
-  }, [isOpen]); // Remove onOpenChange from dependencies to prevent infinite loop
+  }, [isOpen, onOpenChange]); // Added onOpenChange dependency
 
   const selectedOption = options.find((option) => option.value === value);
 

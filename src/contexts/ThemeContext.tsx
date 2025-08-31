@@ -8,18 +8,20 @@ interface ThemeContextType {
   isDark: boolean;
 }
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+// Create context with default value
+const ThemeContext = createContext<ThemeContextType>({
+  theme: "dark",
+  setTheme: () => {},
+  isDark: true,
+});
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>("dark");
   const [isDark, setIsDark] = useState(true);
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    
     // Load theme from localStorage
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       const savedTheme = localStorage.getItem("studyai_theme") as Theme;
       if (savedTheme) {
         setTheme(savedTheme);
@@ -31,10 +33,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!mounted) return;
-    
     // Save theme to localStorage
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       localStorage.setItem("studyai_theme", theme);
     }
 
@@ -54,11 +54,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       root.classList.toggle("dark", theme === "dark");
       root.classList.toggle("light", theme === "light");
     }
-  }, [theme, mounted]);
+  }, [theme]);
 
   // Listen for system theme changes
   useEffect(() => {
-    if (!mounted || theme !== "system") return;
+    if (theme !== "system") return;
     
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const handleChange = (e: MediaQueryListEvent) => {
@@ -69,12 +69,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     mediaQuery.addEventListener("change", handleChange);
     return () => mediaQuery.removeEventListener("change", handleChange);
-  }, [theme, mounted]);
-
-  // Prevent hydration mismatch by not rendering until mounted
-  if (!mounted) {
-    return <div style={{ visibility: 'hidden' }}>{children}</div>;
-  }
+  }, [theme]);
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, isDark }}>

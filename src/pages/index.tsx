@@ -219,7 +219,7 @@ export default function SmartStudy(): JSX.Element {
     ) {
       localStorage.setItem("studyai_quiz", JSON.stringify(state.currentQuiz));
     }
-  }, [state.currentQuiz?.questions?.length]); // Only depend on the length, not the entire object
+  }, [state.currentQuiz]); // Depend on the entire currentQuiz object
 
   // File upload handling
   const addFiles = useCallback(

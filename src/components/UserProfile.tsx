@@ -199,25 +199,25 @@ export default function UserProfile({ isOpen, onClose }: UserProfileProps) {
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-white/5 rounded-xl border border-white/10">
                 <p className="text-2xl font-bold text-white">
-                  {user.stats.totalQuizzes}
+                  {user.stats?.totalQuizzes || 0}
                 </p>
                 <p className="text-sm text-white/60">Total Quizzes</p>
               </div>
               <div className="p-4 bg-white/5 rounded-xl border border-white/10">
                 <p className="text-2xl font-bold text-white">
-                  {user.stats.totalQuestions}
+                  {user.stats?.totalQuestions || 0}
                 </p>
                 <p className="text-sm text-white/60">Questions Answered</p>
               </div>
               <div className="p-4 bg-white/5 rounded-xl border border-white/10">
                 <p className="text-2xl font-bold text-white">
-                  {user.stats.averageScore}%
+                  {user.stats?.averageScore || 0}%
                 </p>
                 <p className="text-sm text-white/60">Average Score</p>
               </div>
               <div className="p-4 bg-white/5 rounded-xl border border-white/10">
                 <p className="text-2xl font-bold text-white">
-                  {user.stats.studyStreak}
+                  {user.stats?.studyStreak || 0}
                 </p>
                 <p className="text-sm text-white/60">Day Streak</p>
               </div>
@@ -232,12 +232,12 @@ export default function UserProfile({ isOpen, onClose }: UserProfileProps) {
             <div className="space-y-3 text-sm text-white/60">
               <div className="flex justify-between">
                 <span>Member since:</span>
-                <span className="text-white">{formatDate(user.createdAt)}</span>
+                <span className="text-white">{user.createdAt ? formatDate(user.createdAt) : 'N/A'}</span>
               </div>
               <div className="flex justify-between">
                 <span>Last login:</span>
                 <span className="text-white">
-                  {formatDate(user.lastLoginAt)}
+                  {user.lastLoginAt ? formatDate(user.lastLoginAt) : 'N/A'}
                 </span>
               </div>
             </div>

@@ -270,7 +270,7 @@ export default function GuidedLearning({
 
       return () => clearTimeout(timer);
     }
-  }, [isOpen, documentContent, isInitialized]); // Use isInitialized instead of learningSteps.length
+  }, [isOpen, documentContent, isInitialized, initializeLearning]); // Added initializeLearning dependency
 
   const currentStepData = learningSteps[currentStep] || {
     id: "loading",
