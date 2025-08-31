@@ -282,7 +282,7 @@ export default function GuidedLearning({
         console.log("Using client-side guided learning fallback");
 
         // Use document content to create dynamic learning steps
-        const documentPreview = documentContent.substring(0, 300) + "...";
+        // const documentPreview = documentContent.substring(0, 300) + "...";
 
         // Extract key topics from the document content
         const keyTopics = extractKeyTopics(documentContent);
