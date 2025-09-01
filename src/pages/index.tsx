@@ -129,7 +129,7 @@ function SmartStudy() {
         loadingMessage: "🎯 Generating questions...",
       });
 
-      // Initialize with empty quiz structure and show immediately
+      // Initialize with empty quiz structure but don't show yet
       const initialQuizData = { questions: [] };
 
       updateState({
@@ -139,19 +139,8 @@ function SmartStudy() {
         selectedAnswer: null,
         showResult: false,
         quizComplete: false,
-        questionsReady: true, // Show quiz immediately
+        questionsReady: false, // Don't show quiz until all questions are ready
       });
-
-      // Auto-scroll to quiz interface immediately
-      setTimeout(() => {
-        const quizSection = document.querySelector("[data-quiz-section]");
-        if (quizSection) {
-          quizSection.scrollIntoView({
-            behavior: "smooth",
-            block: "center",
-          });
-        }
-      }, 200);
 
       // Generate questions in smaller batches for real-time updates
       const batchSize = 3; // Smaller batches for more frequent updates
@@ -172,7 +161,7 @@ function SmartStudy() {
             targetCount
           )} of ${targetCount}... (${Math.round(
             (generatedCount / targetCount) * 100
-          )}% complete)`,
+          )}% complete) - Please wait for all questions to be ready`,
         });
 
         // Use the Railway backend for AI-powered quiz generation
@@ -315,7 +304,7 @@ function SmartStudy() {
 
       if (cancellationRef.current.cancelled) return;
 
-      // Success - update state (quiz is already shown)
+      // Success - update state and show quiz
       updateState({
         freeGenerationsLeft:
           state.freeGenerationsLeft > 0 ? state.freeGenerationsLeft - 1 : 0,
@@ -324,12 +313,19 @@ function SmartStudy() {
         } questions generated successfully.`,
         isGeneratingMore: false,
         isLoading: false, // Stop loading
+        questionsReady: true, // Show quiz now
       });
 
-      // Show completion message briefly
+      // Auto-scroll to quiz interface and center it
       setTimeout(() => {
-        updateState({ loadingMessage: "" });
-      }, 2000);
+        const quizSection = document.querySelector("[data-quiz-section]");
+        if (quizSection) {
+          quizSection.scrollIntoView({
+            behavior: "smooth",
+            block: "center", // Center the quiz on screen
+          });
+        }
+      }, 300);
     } catch (error) {
       console.error("Quiz generation error:", error);
 
