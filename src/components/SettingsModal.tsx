@@ -20,6 +20,7 @@ import {
   Target,
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
+import { QuizSettings } from "@/types";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -30,15 +31,14 @@ interface SettingsModalProps {
   customApiKey: string;
   useCustomApiKey: boolean;
   onUpdateApiKey: (key: string, useCustom: boolean) => void;
-  quizSettings?: {
-    questionCount: number;
-    difficulty: string;
-    questionType: string;
-    focusArea: string;
-    model: string;
-  };
-  onUpdateQuizSettings?: (settings: any) => void;
-  currentQuiz?: { questions: any[] } | null;
+  quizSettings?: QuizSettings;
+  onUpdateQuizSettings?: (settings: QuizSettings) => void;
+  currentQuiz?: { questions: Array<{
+    question: string;
+    options: string[];
+    correct: number;
+    explanation: string;
+  }> } | null;
 }
 
 export default function SettingsModal({
@@ -62,7 +62,7 @@ export default function SettingsModal({
   const [autoSave, setAutoSave] = useState(true);
   const [localApiKey, setLocalApiKey] = useState(customApiKey);
   const [localUseCustomApiKey, setLocalUseCustomApiKey] = useState(useCustomApiKey);
-  const [localQuizSettings, setLocalQuizSettings] = useState(quizSettings || {
+  const [localQuizSettings, setLocalQuizSettings] = useState<QuizSettings>(quizSettings || {
     questionCount: 10,
     difficulty: "medium",
     questionType: "multiple_choice",
@@ -535,7 +535,7 @@ export default function SettingsModal({
                       max="50"
                       value={localQuizSettings.questionCount}
                       onChange={(e) => {
-                        const newSettings = { ...localQuizSettings, questionCount: parseInt(e.target.value) || 10 };
+                        const newSettings = { ...localQuizSettings, questionCount: parseInt(e.target.value) || 10 } as QuizSettings;
                         setLocalQuizSettings(newSettings);
                         onUpdateQuizSettings?.(newSettings);
                       }}
@@ -551,7 +551,7 @@ export default function SettingsModal({
                     <select
                       value={localQuizSettings.difficulty}
                       onChange={(e) => {
-                        const newSettings = { ...localQuizSettings, difficulty: e.target.value };
+                        const newSettings = { ...localQuizSettings, difficulty: e.target.value as 'easy' | 'medium' | 'hard' | 'mixed' };
                         setLocalQuizSettings(newSettings);
                         onUpdateQuizSettings?.(newSettings);
                       }}
@@ -571,7 +571,7 @@ export default function SettingsModal({
                     <select
                       value={localQuizSettings.questionType}
                       onChange={(e) => {
-                        const newSettings = { ...localQuizSettings, questionType: e.target.value };
+                        const newSettings = { ...localQuizSettings, questionType: e.target.value as 'multiple_choice' | 'true_false' | 'mixed' };
                         setLocalQuizSettings(newSettings);
                         onUpdateQuizSettings?.(newSettings);
                       }}
@@ -579,7 +579,7 @@ export default function SettingsModal({
                     >
                       <option value="multiple_choice">Multiple Choice</option>
                       <option value="true_false">True/False</option>
-                      <option value="fill_blank">Fill in the Blank</option>
+                      <option value="mixed">Mixed</option>
                     </select>
                   </div>
 

@@ -271,7 +271,7 @@ function SmartStudy() {
         // Deduplicate questions before adding to quiz
         const existingQuestions = state.currentQuiz?.questions || [];
         const allQuestions = [...existingQuestions, ...newQuestions];
-        
+
         // Remove duplicates based on question text
         const uniqueQuestions = allQuestions.filter((question, index, self) => {
           const normalizedQuestion = question.question
@@ -279,15 +279,24 @@ function SmartStudy() {
             .replace(/[^\w\s]/g, "")
             .replace(/\s+/g, " ")
             .trim();
-          
-          return self.findIndex(q => 
-            q.question.toLowerCase().replace(/[^\w\s]/g, "").replace(/\s+/g, " ").trim() === normalizedQuestion
-          ) === index;
+
+          return (
+            self.findIndex(
+              (q) =>
+                q.question
+                  .toLowerCase()
+                  .replace(/[^\w\s]/g, "")
+                  .replace(/\s+/g, " ")
+                  .trim() === normalizedQuestion
+            ) === index
+          );
         });
 
         // Only add truly new questions
-        const newUniqueQuestions = uniqueQuestions.slice(existingQuestions.length);
-        
+        const newUniqueQuestions = uniqueQuestions.slice(
+          existingQuestions.length
+        );
+
         updateState((prevState) => ({
           currentQuiz: {
             questions: uniqueQuestions,
@@ -640,7 +649,9 @@ function SmartStudy() {
           updateState({ customApiKey: key, useCustomApiKey: useCustom })
         }
         quizSettings={state.quizSettings}
-        onUpdateQuizSettings={(settings) => updateState({ quizSettings: settings })}
+        onUpdateQuizSettings={(settings) =>
+          updateState({ quizSettings: settings })
+        }
         currentQuiz={state.currentQuiz}
       />
 
