@@ -124,17 +124,21 @@ async def generate_quiz(request: dict):
         difficulty = request.get("difficulty", "medium")
         question_type = request.get("questionType", "multiple_choice")
         focus_area = request.get("focusArea", "")
+        custom_api_key = request.get("customApiKey", "")
         
         if not content:
             raise HTTPException(status_code=400, detail="Document content is required")
         
-        # Get API keys
-        gemini_keys = get_gemini_api_keys()
-        if not gemini_keys:
-            raise HTTPException(status_code=500, detail="No Gemini API keys configured")
-        
-        # Use the first available key
-        api_key = gemini_keys[0]
+        # Use custom API key if provided, otherwise use server keys
+        if custom_api_key:
+            api_key = custom_api_key
+            print(f"Using custom API key: {custom_api_key[:10]}...")
+        else:
+            # Get API keys from server
+            gemini_keys = get_gemini_api_keys()
+            if not gemini_keys:
+                raise HTTPException(status_code=500, detail="No Gemini API keys configured")
+            api_key = gemini_keys[0]
         
         # Create prompt for quiz generation
         prompt = f"""
@@ -267,17 +271,21 @@ async def guided_learning(request: dict):
     try:
         content = request.get("documentContent", "")
         step = request.get("step", "analyze")
+        custom_api_key = request.get("customApiKey", "")
         
         if not content:
             raise HTTPException(status_code=400, detail="Document content is required")
         
-        # Get API keys
-        gemini_keys = get_gemini_api_keys()
-        if not gemini_keys:
-            raise HTTPException(status_code=500, detail="No Gemini API keys configured")
-        
-        # Use the first available key
-        api_key = gemini_keys[0]
+        # Use custom API key if provided, otherwise use server keys
+        if custom_api_key:
+            api_key = custom_api_key
+            print(f"Using custom API key for guided learning: {custom_api_key[:10]}...")
+        else:
+            # Get API keys from server
+            gemini_keys = get_gemini_api_keys()
+            if not gemini_keys:
+                raise HTTPException(status_code=500, detail="No Gemini API keys configured")
+            api_key = gemini_keys[0]
         
         if step == "analyze":
             # Create learning plan

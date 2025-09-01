@@ -26,6 +26,9 @@ interface SettingsModalProps {
   freeGenerationsLeft: number;
   isProUser: boolean;
   onUpgradeToPro: () => void;
+  customApiKey: string;
+  useCustomApiKey: boolean;
+  onUpdateApiKey: (key: string, useCustom: boolean) => void;
 }
 
 export default function SettingsModal({
@@ -34,6 +37,9 @@ export default function SettingsModal({
   freeGenerationsLeft,
   isProUser,
   onUpgradeToPro,
+  customApiKey,
+  useCustomApiKey,
+  onUpdateApiKey,
 }: SettingsModalProps) {
   const { theme, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<"account" | "preferences" | "pro">(
@@ -41,6 +47,8 @@ export default function SettingsModal({
   );
   const [notifications, setNotifications] = useState(true);
   const [autoSave, setAutoSave] = useState(true);
+  const [localApiKey, setLocalApiKey] = useState(customApiKey);
+  const [localUseCustomApiKey, setLocalUseCustomApiKey] = useState(useCustomApiKey);
 
   if (!isOpen) return null;
 
@@ -340,6 +348,70 @@ export default function SettingsModal({
                         }`}
                       />
                     </button>
+                  </div>
+                </div>
+
+                {/* API Key Settings */}
+                <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/20">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-500 rounded-xl flex items-center justify-center">
+                      <Shield className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">API Key Settings</h3>
+                      <p className="text-slate-300 text-sm">
+                        Use your own API key for unlimited access
+                      </p>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-white/10 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <Shield className="w-5 h-5 text-white" />
+                        <div>
+                          <h4 className="text-white font-medium">
+                            Use Custom API Key
+                          </h4>
+                          <p className="text-slate-300 text-sm">
+                            Bypass generation limits with your own key
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setLocalUseCustomApiKey(!localUseCustomApiKey);
+                          onUpdateApiKey(localApiKey, !localUseCustomApiKey);
+                        }}
+                        className={`w-12 h-6 rounded-full transition-colors duration-200 ${
+                          localUseCustomApiKey ? "bg-green-500" : "bg-white/20"
+                        }`}
+                      >
+                        <div
+                          className={`w-4 h-4 bg-white rounded-full transition-transform duration-200 ${
+                            localUseCustomApiKey ? "translate-x-6" : "translate-x-1"
+                          }`}
+                        />
+                      </button>
+                    </div>
+                    
+                    {localUseCustomApiKey && (
+                      <div className="p-4 bg-white/10 rounded-xl">
+                        <label className="block text-white font-medium mb-2">
+                          Gemini API Key
+                        </label>
+                        <input
+                          type="password"
+                          value={localApiKey}
+                          onChange={(e) => setLocalApiKey(e.target.value)}
+                          onBlur={() => onUpdateApiKey(localApiKey, localUseCustomApiKey)}
+                          placeholder="Enter your Gemini API key"
+                          className="w-full p-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-purple-400 transition-colors"
+                        />
+                        <p className="text-slate-300 text-xs mt-2">
+                          Your API key is stored locally and never shared
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

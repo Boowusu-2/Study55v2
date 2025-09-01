@@ -28,6 +28,8 @@ interface SmartStudyState {
   extractedText: string;
   isUploading: boolean;
   uploadProgress: number;
+  customApiKey: string;
+  useCustomApiKey: boolean;
 }
 
 const initialState: SmartStudyState = {
@@ -62,6 +64,8 @@ const initialState: SmartStudyState = {
   extractedText: "",
   isUploading: false,
   uploadProgress: 0,
+  customApiKey: "",
+  useCustomApiKey: false,
 };
 
 export function useQuizState() {

@@ -129,7 +129,7 @@ function SmartStudy() {
         loadingMessage: "🎯 Generating questions...",
       });
 
-      // Initialize with empty quiz structure but don't show yet
+      // Initialize with empty quiz structure and show immediately
       const initialQuizData = { questions: [] };
 
       updateState({
@@ -139,8 +139,19 @@ function SmartStudy() {
         selectedAnswer: null,
         showResult: false,
         quizComplete: false,
-        questionsReady: false, // Don't show questions yet
+        questionsReady: true, // Show quiz immediately
       });
+
+      // Auto-scroll to quiz interface immediately
+      setTimeout(() => {
+        const quizSection = document.querySelector("[data-quiz-section]");
+        if (quizSection) {
+          quizSection.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }
+      }, 200);
 
       // Generate questions in smaller batches for real-time updates
       const batchSize = 3; // Smaller batches for more frequent updates
@@ -201,6 +212,26 @@ function SmartStudy() {
         // Call the Railway backend for AI-powered quiz generation
         let newQuestions = [];
         try {
+          const requestBody: {
+            content: string;
+            questionCount: number;
+            difficulty: string;
+            questionType: string;
+            focusArea: string;
+            customApiKey?: string;
+          } = {
+            content: documentContent,
+            questionCount: currentBatchSize,
+            difficulty: state.quizSettings.difficulty,
+            questionType: state.quizSettings.questionType,
+            focusArea: state.quizSettings.focusArea,
+          };
+
+          // Add custom API key if enabled
+          if (state.useCustomApiKey && state.customApiKey) {
+            requestBody.customApiKey = state.customApiKey;
+          }
+
           const response = await fetch(
             "https://study55v2-production-09c8.up.railway.app/generate-quiz",
             {
@@ -208,13 +239,7 @@ function SmartStudy() {
               headers: {
                 "Content-Type": "application/json",
               },
-              body: JSON.stringify({
-                content: documentContent,
-                questionCount: currentBatchSize,
-                difficulty: state.quizSettings.difficulty,
-                questionType: state.quizSettings.questionType,
-                focusArea: state.quizSettings.focusArea,
-              }),
+              body: JSON.stringify(requestBody),
             }
           );
 
@@ -265,7 +290,7 @@ function SmartStudy() {
 
       if (cancellationRef.current.cancelled) return;
 
-      // Success - update state and show quiz
+      // Success - update state (quiz is already shown)
       updateState({
         freeGenerationsLeft:
           state.freeGenerationsLeft > 0 ? state.freeGenerationsLeft - 1 : 0,
@@ -274,19 +299,12 @@ function SmartStudy() {
         } questions generated successfully.`,
         isGeneratingMore: false,
         isLoading: false, // Stop loading
-        questionsReady: true, // Show quiz now
       });
 
-      // Auto-scroll to quiz interface and center it
+      // Show completion message briefly
       setTimeout(() => {
-        const quizSection = document.querySelector("[data-quiz-section]");
-        if (quizSection) {
-          quizSection.scrollIntoView({
-            behavior: "smooth",
-            block: "center", // Center the quiz on screen
-          });
-        }
-      }, 300);
+        updateState({ loadingMessage: "" });
+      }, 2000);
     } catch (error) {
       console.error("Quiz generation error:", error);
 
@@ -600,6 +618,9 @@ function SmartStudy() {
         freeGenerationsLeft={state.freeGenerationsLeft}
         isProUser={state.isProUser}
         onUpgradeToPro={handleUpgradeToPro}
+        customApiKey={state.customApiKey}
+        useCustomApiKey={state.useCustomApiKey}
+        onUpdateApiKey={(key, useCustom) => updateState({ customApiKey: key, useCustomApiKey: useCustom })}
       />
 
       <PaymentModal
@@ -619,6 +640,8 @@ function SmartStudy() {
         onClose={() => setShowGuidedLearning(false)}
         documentContent={state.extractedText || ""}
         onGenerateQuiz={generateQuiz}
+        customApiKey={state.customApiKey}
+        useCustomApiKey={state.useCustomApiKey}
       />
     </>
   );

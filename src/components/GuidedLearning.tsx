@@ -34,6 +34,8 @@ interface GuidedLearningProps {
   onClose: () => void;
   documentContent: string;
   onGenerateQuiz: () => void;
+  customApiKey?: string;
+  useCustomApiKey?: boolean;
 }
 
 export default function GuidedLearning({
@@ -41,6 +43,8 @@ export default function GuidedLearning({
   onClose,
   documentContent,
   onGenerateQuiz,
+  customApiKey = "",
+  useCustomApiKey = false,
 }: GuidedLearningProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -242,6 +246,20 @@ export default function GuidedLearning({
         console.log("Attempting to use Railway backend for guided learning");
 
         try {
+          const requestBody: {
+            documentContent: string;
+            step: string;
+            customApiKey?: string;
+          } = {
+            documentContent,
+            step: "analyze",
+          };
+
+          // Add custom API key if enabled
+          if (useCustomApiKey && customApiKey) {
+            requestBody.customApiKey = customApiKey;
+          }
+
           const response = await fetch(
             "https://study55v2-production-09c8.up.railway.app/guided-learning",
             {
@@ -249,10 +267,7 @@ export default function GuidedLearning({
               headers: {
                 "Content-Type": "application/json",
               },
-              body: JSON.stringify({
-                documentContent,
-                step: "analyze",
-              }),
+              body: JSON.stringify(requestBody),
               signal: controller.signal,
             }
           );
