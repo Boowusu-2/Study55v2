@@ -75,3 +75,6 @@ venv.bak/
 backend/venv/
 backend/__pycache__/
 backend/*.pyc
+
+#Tests
+tests/

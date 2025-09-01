@@ -124,12 +124,12 @@ function SmartStudy() {
 
       updateState({
         targetQuestionCount: targetCount,
-        isLoading: false,
+        isLoading: true, // Keep loading active
         isGeneratingMore: true,
         loadingMessage: "🎯 Generating questions...",
       });
 
-      // Initialize with empty quiz structure and show immediately
+      // Initialize with empty quiz structure but don't show yet
       const initialQuizData = { questions: [] };
 
       updateState({
@@ -139,19 +139,8 @@ function SmartStudy() {
         selectedAnswer: null,
         showResult: false,
         quizComplete: false,
-        questionsReady: true, // Show questions immediately
+        questionsReady: false, // Don't show questions yet
       });
-
-      // Auto-scroll to quiz interface immediately
-      setTimeout(() => {
-        const quizSection = document.querySelector("[data-quiz-section]");
-        if (quizSection) {
-          quizSection.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
-        }
-      }, 100);
 
       // Generate questions in smaller batches for real-time updates
       const batchSize = 3; // Smaller batches for more frequent updates
@@ -170,7 +159,7 @@ function SmartStudy() {
           }-${Math.min(
             generatedCount + currentBatchSize,
             targetCount
-          )} of ${targetCount}...`,
+          )} of ${targetCount}... (${Math.round((generatedCount / targetCount) * 100)}% complete)`,
         });
 
         // Use the Railway backend for AI-powered quiz generation
@@ -274,7 +263,7 @@ function SmartStudy() {
 
       if (cancellationRef.current.cancelled) return;
 
-      // Success - update state
+      // Success - update state and show quiz
       updateState({
         freeGenerationsLeft:
           state.freeGenerationsLeft > 0 ? state.freeGenerationsLeft - 1 : 0,
@@ -282,19 +271,20 @@ function SmartStudy() {
           state.currentQuiz?.questions.length || 0
         } questions generated successfully.`,
         isGeneratingMore: false,
-        questionsReady: true,
+        isLoading: false, // Stop loading
+        questionsReady: true, // Show quiz now
       });
 
-      // Auto-scroll to quiz interface after a short delay
+      // Auto-scroll to quiz interface and center it
       setTimeout(() => {
         const quizSection = document.querySelector("[data-quiz-section]");
         if (quizSection) {
           quizSection.scrollIntoView({
             behavior: "smooth",
-            block: "start",
+            block: "center", // Center the quiz on screen
           });
         }
-      }, 500);
+      }, 300);
     } catch (error) {
       console.error("Quiz generation error:", error);
 
@@ -315,6 +305,7 @@ function SmartStudy() {
         isLoading: false,
         loadingMessage: errorMessage,
         isGeneratingMore: false,
+        questionsReady: false, // Don't show quiz on error
       });
 
       // Clear error message after 5 seconds
