@@ -268,21 +268,37 @@ function SmartStudy() {
 
         if (cancellationRef.current.cancelled) return;
 
-        // Add new questions to existing quiz and update immediately
+        // Deduplicate questions before adding to quiz
+        const existingQuestions = state.currentQuiz?.questions || [];
+        const allQuestions = [...existingQuestions, ...newQuestions];
+        
+        // Remove duplicates based on question text
+        const uniqueQuestions = allQuestions.filter((question, index, self) => {
+          const normalizedQuestion = question.question
+            .toLowerCase()
+            .replace(/[^\w\s]/g, "")
+            .replace(/\s+/g, " ")
+            .trim();
+          
+          return self.findIndex(q => 
+            q.question.toLowerCase().replace(/[^\w\s]/g, "").replace(/\s+/g, " ").trim() === normalizedQuestion
+          ) === index;
+        });
+
+        // Only add truly new questions
+        const newUniqueQuestions = uniqueQuestions.slice(existingQuestions.length);
+        
         updateState((prevState) => ({
           currentQuiz: {
-            questions: [
-              ...(prevState.currentQuiz?.questions || []),
-              ...newQuestions,
-            ],
+            questions: uniqueQuestions,
           },
           userAnswers: [
             ...(prevState.userAnswers || []),
-            ...Array.from({ length: newQuestions.length }, () => null),
+            ...Array.from({ length: newUniqueQuestions.length }, () => null),
           ],
         }));
 
-        generatedCount += newQuestions.length;
+        generatedCount += newUniqueQuestions.length;
 
         // Shorter delay between batches for more responsive feel
         await new Promise((resolve) => setTimeout(resolve, 300));
@@ -623,6 +639,9 @@ function SmartStudy() {
         onUpdateApiKey={(key, useCustom) =>
           updateState({ customApiKey: key, useCustomApiKey: useCustom })
         }
+        quizSettings={state.quizSettings}
+        onUpdateQuizSettings={(settings) => updateState({ quizSettings: settings })}
+        currentQuiz={state.currentQuiz}
       />
 
       <PaymentModal

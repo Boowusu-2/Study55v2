@@ -17,6 +17,7 @@ import {
   HelpCircle,
   User,
   LogOut,
+  Target,
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 
@@ -29,6 +30,15 @@ interface SettingsModalProps {
   customApiKey: string;
   useCustomApiKey: boolean;
   onUpdateApiKey: (key: string, useCustom: boolean) => void;
+  quizSettings?: {
+    questionCount: number;
+    difficulty: string;
+    questionType: string;
+    focusArea: string;
+    model: string;
+  };
+  onUpdateQuizSettings?: (settings: any) => void;
+  currentQuiz?: { questions: any[] } | null;
 }
 
 export default function SettingsModal({
@@ -40,15 +50,25 @@ export default function SettingsModal({
   customApiKey,
   useCustomApiKey,
   onUpdateApiKey,
+  quizSettings,
+  onUpdateQuizSettings,
+  currentQuiz,
 }: SettingsModalProps) {
   const { theme, setTheme } = useTheme();
-  const [activeTab, setActiveTab] = useState<"account" | "preferences" | "pro">(
+  const [activeTab, setActiveTab] = useState<"account" | "preferences" | "quiz" | "pro">(
     "account"
   );
   const [notifications, setNotifications] = useState(true);
   const [autoSave, setAutoSave] = useState(true);
   const [localApiKey, setLocalApiKey] = useState(customApiKey);
   const [localUseCustomApiKey, setLocalUseCustomApiKey] = useState(useCustomApiKey);
+  const [localQuizSettings, setLocalQuizSettings] = useState(quizSettings || {
+    questionCount: 10,
+    difficulty: "medium",
+    questionType: "multiple_choice",
+    focusArea: "",
+    model: "auto",
+  });
 
   if (!isOpen) return null;
 
@@ -129,6 +149,17 @@ export default function SettingsModal({
               Preferences
             </button>
             <button
+              onClick={() => setActiveTab("quiz")}
+              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+                activeTab === "quiz"
+                  ? "bg-white/20 text-white shadow-sm"
+                  : "text-slate-300 hover:text-white"
+              }`}
+            >
+              <Target className="w-4 h-4 inline mr-2" />
+              Quiz
+            </button>
+            <button
               onClick={() => setActiveTab("pro")}
               className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
                 activeTab === "pro"
@@ -173,46 +204,31 @@ export default function SettingsModal({
               <div className="space-y-3">
                 <button
                   onClick={() => {
-                    // Export quiz data functionality
-                    const quizData = {
-                      questions: [], // This would be populated with actual quiz data
-                      timestamp: "2025-08-31T00:00:00.000Z",
-                      user: "Current User",
-                    };
-                    const dataStr = JSON.stringify(quizData, null, 2);
-                    const dataBlob = new Blob([dataStr], {
-                      type: "application/json",
-                    });
-                    const url = URL.createObjectURL(dataBlob);
-                    if (typeof window !== "undefined") {
-                      const link = document.createElement("a");
-                      link.href = url;
-                      link.download = `quiz-data-2025-08-31.json`;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
+                    // Clear all data functionality
+                    if (confirm("Are you sure you want to clear all quiz data? This action cannot be undone.")) {
+                      localStorage.clear();
+                      window.location.reload();
                     }
-                    URL.revokeObjectURL(url);
                   }}
                   className="w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors flex items-center gap-3"
                 >
-                  <Download className="w-5 h-5 text-white" />
+                  <LogOut className="w-5 h-5 text-white" />
                   <span className="text-white font-medium">
-                    Export Quiz Data
+                    Clear All Data
                   </span>
                 </button>
                 <button
                   onClick={() => {
-                    // Share progress functionality
+                    // Share app functionality
                     if (typeof window !== "undefined") {
                       if (navigator.share) {
                         navigator.share({
-                          title: "My Study.ai Progress",
-                          text: "Check out my learning progress on study.ai!",
+                          title: "SmartStudy - AI-Powered Learning",
+                          text: "Check out this amazing AI-powered quiz generator!",
                           url: window.location.href,
                         });
                       } else {
-                        // Fallback for browsers that don't support Web Share API
+                        // Fallback: copy to clipboard
                         navigator.clipboard.writeText(window.location.href);
                         alert("Link copied to clipboard!");
                       }
@@ -221,9 +237,15 @@ export default function SettingsModal({
                   className="w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors flex items-center gap-3"
                 >
                   <Share2 className="w-5 h-5 text-white" />
-                  <span className="text-white font-medium">Share Progress</span>
+                  <span className="text-white font-medium">Share App</span>
                 </button>
-                <button className="w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    // Help/Support functionality
+                    window.open("https://github.com/Boowusu-2/Study55v2", "_blank");
+                  }}
+                  className="w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors flex items-center gap-3"
+                >
                   <HelpCircle className="w-5 h-5 text-white" />
                   <span className="text-white font-medium">Help & Support</span>
                 </button>
@@ -299,15 +321,80 @@ export default function SettingsModal({
                   Notifications
                 </h3>
                 <div className="space-y-4">
+                  {/* Theme Settings */}
+                  <div className="p-4 bg-white/10 rounded-xl">
+                    <h4 className="text-white font-medium mb-3">Theme</h4>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setTheme("light")}
+                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          theme === "light"
+                            ? "bg-purple-500 text-white"
+                            : "bg-white/10 text-slate-300 hover:text-white"
+                        }`}
+                      >
+                        <Sun className="w-4 h-4 inline mr-2" />
+                        Light
+                      </button>
+                      <button
+                        onClick={() => setTheme("dark")}
+                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          theme === "dark"
+                            ? "bg-purple-500 text-white"
+                            : "bg-white/10 text-slate-300 hover:text-white"
+                        }`}
+                      >
+                        <Moon className="w-4 h-4 inline mr-2" />
+                        Dark
+                      </button>
+                      <button
+                        onClick={() => setTheme("system")}
+                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          theme === "system"
+                            ? "bg-purple-500 text-white"
+                            : "bg-white/10 text-slate-300 hover:text-white"
+                        }`}
+                      >
+                        <Monitor className="w-4 h-4 inline mr-2" />
+                        System
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Auto-advance Settings */}
+                  <div className="flex items-center justify-between p-4 bg-white/10 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <Zap className="w-5 h-5 text-white" />
+                      <div>
+                        <h4 className="text-white font-medium">
+                          Auto-advance Questions
+                        </h4>
+                        <p className="text-slate-300 text-sm">
+                          Automatically move to next question after answering
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        // This would update the global state
+                        console.log("Auto-advance toggled");
+                      }}
+                      className={`w-12 h-6 rounded-full transition-colors duration-200 bg-white/20`}
+                    >
+                      <div className="w-4 h-4 bg-white rounded-full transition-transform duration-200 translate-x-1" />
+                    </button>
+                  </div>
+
+                  {/* Sound Settings */}
                   <div className="flex items-center justify-between p-4 bg-white/10 rounded-xl">
                     <div className="flex items-center gap-3">
                       <Bell className="w-5 h-5 text-white" />
                       <div>
                         <h4 className="text-white font-medium">
-                          Email Notifications
+                          Sound Effects
                         </h4>
                         <p className="text-slate-300 text-sm">
-                          Receive updates about new features
+                          Play sounds for correct/incorrect answers
                         </p>
                       </div>
                     </div>
@@ -324,6 +411,8 @@ export default function SettingsModal({
                       />
                     </button>
                   </div>
+
+                  {/* Auto-save Settings */}
                   <div className="flex items-center justify-between p-4 bg-white/10 rounded-xl">
                     <div className="flex items-center gap-3">
                       <Settings className="w-5 h-5 text-white" />
@@ -415,6 +504,182 @@ export default function SettingsModal({
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Quiz Settings Tab */}
+          {activeTab === "quiz" && (
+            <div className="space-y-6">
+              {/* Quiz Preferences */}
+              <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/20">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center">
+                    <Target className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white">Quiz Preferences</h3>
+                    <p className="text-slate-300 text-sm">
+                      Customize your quiz generation settings
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  {/* Question Count */}
+                  <div className="p-4 bg-white/10 rounded-xl">
+                    <label className="block text-white font-medium mb-2">
+                      Number of Questions
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="50"
+                      value={localQuizSettings.questionCount}
+                      onChange={(e) => {
+                        const newSettings = { ...localQuizSettings, questionCount: parseInt(e.target.value) || 10 };
+                        setLocalQuizSettings(newSettings);
+                        onUpdateQuizSettings?.(newSettings);
+                      }}
+                      className="w-full p-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-purple-400 transition-colors"
+                    />
+                  </div>
+
+                  {/* Difficulty */}
+                  <div className="p-4 bg-white/10 rounded-xl">
+                    <label className="block text-white font-medium mb-2">
+                      Difficulty Level
+                    </label>
+                    <select
+                      value={localQuizSettings.difficulty}
+                      onChange={(e) => {
+                        const newSettings = { ...localQuizSettings, difficulty: e.target.value };
+                        setLocalQuizSettings(newSettings);
+                        onUpdateQuizSettings?.(newSettings);
+                      }}
+                      className="w-full p-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-purple-400 transition-colors"
+                    >
+                      <option value="easy">Easy</option>
+                      <option value="medium">Medium</option>
+                      <option value="hard">Hard</option>
+                    </select>
+                  </div>
+
+                  {/* Question Type */}
+                  <div className="p-4 bg-white/10 rounded-xl">
+                    <label className="block text-white font-medium mb-2">
+                      Question Type
+                    </label>
+                    <select
+                      value={localQuizSettings.questionType}
+                      onChange={(e) => {
+                        const newSettings = { ...localQuizSettings, questionType: e.target.value };
+                        setLocalQuizSettings(newSettings);
+                        onUpdateQuizSettings?.(newSettings);
+                      }}
+                      className="w-full p-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-purple-400 transition-colors"
+                    >
+                      <option value="multiple_choice">Multiple Choice</option>
+                      <option value="true_false">True/False</option>
+                      <option value="fill_blank">Fill in the Blank</option>
+                    </select>
+                  </div>
+
+                  {/* Focus Area */}
+                  <div className="p-4 bg-white/10 rounded-xl">
+                    <label className="block text-white font-medium mb-2">
+                      Focus Area (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={localQuizSettings.focusArea}
+                      onChange={(e) => {
+                        const newSettings = { ...localQuizSettings, focusArea: e.target.value };
+                        setLocalQuizSettings(newSettings);
+                        onUpdateQuizSettings?.(newSettings);
+                      }}
+                      placeholder="e.g., Software Engineering, Machine Learning"
+                      className="w-full p-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-purple-400 transition-colors"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Export Current Quiz */}
+              {currentQuiz && currentQuiz.questions.length > 0 && (
+                <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/20">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-500 rounded-xl flex items-center justify-center">
+                      <Download className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">Export Quiz</h3>
+                      <p className="text-slate-300 text-sm">
+                        Download your current quiz data
+                      </p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => {
+                        const quizData = {
+                          questions: currentQuiz.questions,
+                          timestamp: new Date().toISOString(),
+                          settings: localQuizSettings,
+                        };
+                        const dataStr = JSON.stringify(quizData, null, 2);
+                        const dataBlob = new Blob([dataStr], {
+                          type: "application/json",
+                        });
+                        const url = URL.createObjectURL(dataBlob);
+                        const link = document.createElement("a");
+                        link.href = url;
+                        link.download = `quiz-${new Date().toISOString().split('T')[0]}.json`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                      }}
+                      className="w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors flex items-center gap-3"
+                    >
+                      <Download className="w-5 h-5 text-white" />
+                      <span className="text-white font-medium">
+                        Export Quiz as JSON
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        const csvData = [
+                          ['Question', 'Option A', 'Option B', 'Option C', 'Option D', 'Correct Answer', 'Explanation'],
+                          ...currentQuiz.questions.map(q => [
+                            q.question,
+                            q.options[0],
+                            q.options[1],
+                            q.options[2],
+                            q.options[3],
+                            q.options[q.correct],
+                            q.explanation
+                          ])
+                        ];
+                        const csvContent = csvData.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+                        const dataBlob = new Blob([csvContent], { type: 'text/csv' });
+                        const url = URL.createObjectURL(dataBlob);
+                        const link = document.createElement("a");
+                        link.href = url;
+                        link.download = `quiz-${new Date().toISOString().split('T')[0]}.csv`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                      }}
+                      className="w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors flex items-center gap-3"
+                    >
+                      <Download className="w-5 h-5 text-white" />
+                      <span className="text-white font-medium">
+                        Export Quiz as CSV
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
