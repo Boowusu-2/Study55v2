@@ -1,0 +1,1 @@
+Software Engineering is a systematic approach to the design, development, operation, and maintenance of software systems. The Software Development Life Cycle (SDLC) is a framework that defines tasks performed at each step in the software development process.
