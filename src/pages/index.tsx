@@ -142,157 +142,113 @@ function SmartStudy() {
         questionsReady: false, // Don't show quiz until all questions are ready
       });
 
-      // Generate questions in smaller batches for real-time updates
-      const batchSize = 3; // Smaller batches for more frequent updates
+      // Generate questions in one request for better reliability
+      updateState({
+        loadingMessage: `🎯 Generating ${targetCount} questions with AI...`,
+      });
+
+      // Use the Railway backend for AI-powered quiz generation
+      console.log("Using Railway backend for AI-powered quiz generation");
+
+      // Extract text from uploaded files first
+      let documentContent = "";
       let generatedCount = 0;
-
-      while (
-        generatedCount < targetCount &&
-        !cancellationRef.current.cancelled
-      ) {
-        const remainingCount = targetCount - generatedCount;
-        const currentBatchSize = Math.min(batchSize, remainingCount);
-
-        updateState({
-          loadingMessage: `🎯 Generating questions ${
-            generatedCount + 1
-          }-${Math.min(
-            generatedCount + currentBatchSize,
-            targetCount
-          )} of ${targetCount}... (${Math.round(
-            (generatedCount / targetCount) * 100
-          )}% complete) - Please wait for all questions to be ready`,
+      try {
+        documentContent = await extractTextFromServer(state.uploadedFiles);
+        console.log("Extracted document content for quiz generation:", {
+          contentLength: documentContent.length,
+          preview: documentContent.substring(0, 200) + "...",
         });
 
-        // Use the Railway backend for AI-powered quiz generation
-        console.log("Using Railway backend for AI-powered quiz generation");
+        // Call the Railway backend for AI-powered quiz generation
+        const requestBody: {
+          content: string;
+          questionCount: number;
+          difficulty: string;
+          questionType: string;
+          focusArea: string;
+          customApiKey?: string;
+        } = {
+          content: documentContent,
+          questionCount: targetCount, // Request ALL questions at once
+          difficulty: state.quizSettings.difficulty,
+          questionType: state.quizSettings.questionType,
+          focusArea: state.quizSettings.focusArea,
+        };
 
-        // Extract text from uploaded files first
-        let documentContent = "";
-        try {
-          documentContent = await extractTextFromServer(state.uploadedFiles);
-          console.log("Extracted document content for quiz generation:", {
-            contentLength: documentContent.length,
-            preview: documentContent.substring(0, 200) + "...",
+        // Add custom API key if enabled
+        if (state.useCustomApiKey && state.customApiKey) {
+          requestBody.customApiKey = state.customApiKey;
+        }
+
+        const response = await fetch(
+          "https://study55v2-production-09c8.up.railway.app/generate-quiz",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(requestBody),
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log("AI-powered quiz generation successful:", {
+            questionsGenerated: data.questions?.length || 0,
           });
-        } catch (error) {
-          console.error("Failed to extract text for quiz generation:", error);
-          // Fallback to client-side generation if extraction fails
-          const newQuestions = createFallbackQuestions(currentBatchSize);
+          const newQuestions = data.questions || [];
+
+          // Add questions to quiz
+          updateState({
+            currentQuiz: {
+              questions: newQuestions,
+            },
+            userAnswers: Array.from(
+              { length: newQuestions.length },
+              () => null
+            ),
+          });
+
+          generatedCount = newQuestions.length;
+        } else {
+          console.error("Backend quiz generation failed:", response.status);
+          // Fallback to client-side generation
+          const newQuestions = createFallbackQuestions(
+            targetCount,
+            documentContent
+          );
 
           // Add fallback questions to quiz
           updateState({
             currentQuiz: {
-              questions: [
-                ...(state.currentQuiz?.questions || []),
-                ...newQuestions,
-              ],
+              questions: newQuestions,
             },
-            userAnswers: [
-              ...(state.userAnswers || []),
-              ...Array.from({ length: newQuestions.length }, () => null),
-            ],
+            userAnswers: Array.from(
+              { length: newQuestions.length },
+              () => null
+            ),
           });
 
-          generatedCount += newQuestions.length;
-          continue; // Skip to next iteration
+          generatedCount = newQuestions.length;
         }
-
-        // Call the Railway backend for AI-powered quiz generation
-        let newQuestions = [];
-        try {
-          const requestBody: {
-            content: string;
-            questionCount: number;
-            difficulty: string;
-            questionType: string;
-            focusArea: string;
-            customApiKey?: string;
-          } = {
-            content: documentContent,
-            questionCount: currentBatchSize,
-            difficulty: state.quizSettings.difficulty,
-            questionType: state.quizSettings.questionType,
-            focusArea: state.quizSettings.focusArea,
-          };
-
-          // Add custom API key if enabled
-          if (state.useCustomApiKey && state.customApiKey) {
-            requestBody.customApiKey = state.customApiKey;
-          }
-
-          const response = await fetch(
-            "https://study55v2-production-09c8.up.railway.app/generate-quiz",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(requestBody),
-            }
-          );
-
-          if (response.ok) {
-            const data = await response.json();
-            console.log("AI-powered quiz generation successful:", {
-              questionsGenerated: data.questions?.length || 0,
-            });
-            newQuestions = data.questions || [];
-          } else {
-            console.error("Backend quiz generation failed:", response.status);
-            // Fallback to client-side generation
-            newQuestions = createFallbackQuestions(
-              currentBatchSize,
-              documentContent
-            );
-          }
-        } catch (error) {
-          console.error("Error calling backend for quiz generation:", error);
-          // Fallback to client-side generation
-          newQuestions = createFallbackQuestions(
-            currentBatchSize,
-            documentContent
-          );
-        }
-
-        if (cancellationRef.current.cancelled) return;
-
-        // Add new questions to existing quiz
-        const existingQuestions = state.currentQuiz?.questions || [];
-        const updatedQuestions = [...existingQuestions, ...newQuestions];
-
-        // Simple deduplication - only remove exact duplicates
-        const uniqueQuestions = updatedQuestions.filter(
-          (question, index, self) => {
-            return (
-              self.findIndex((q) => q.question === question.question) === index
-            );
-          }
+      } catch (error) {
+        console.error("Error calling backend for quiz generation:", error);
+        // Fallback to client-side generation
+        const newQuestions = createFallbackQuestions(
+          targetCount,
+          documentContent
         );
 
-        updateState((prevState) => ({
+        // Add fallback questions to quiz
+        updateState({
           currentQuiz: {
-            questions: uniqueQuestions,
+            questions: newQuestions,
           },
-          userAnswers: [
-            ...(prevState.userAnswers || []),
-            ...Array.from({ length: newQuestions.length }, () => null),
-          ],
-        }));
+          userAnswers: Array.from({ length: newQuestions.length }, () => null),
+        });
 
-        generatedCount += newQuestions.length;
-
-        // Log progress for debugging
-        console.log(
-          `📊 Progress: ${generatedCount}/${targetCount} questions generated`
-        );
-        console.log(`   Current batch: ${newQuestions.length} questions`);
-        console.log(
-          `   Total accumulated: ${uniqueQuestions.length} questions`
-        );
-
-        // Shorter delay between batches for more responsive feel
-        await new Promise((resolve) => setTimeout(resolve, 300));
+        generatedCount = newQuestions.length;
       }
 
       if (cancellationRef.current.cancelled) return;
