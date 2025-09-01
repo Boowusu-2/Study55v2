@@ -159,7 +159,9 @@ function SmartStudy() {
           }-${Math.min(
             generatedCount + currentBatchSize,
             targetCount
-          )} of ${targetCount}... (${Math.round((generatedCount / targetCount) * 100)}% complete)`,
+          )} of ${targetCount}... (${Math.round(
+            (generatedCount / targetCount) * 100
+          )}% complete)`,
         });
 
         // Use the Railway backend for AI-powered quiz generation
