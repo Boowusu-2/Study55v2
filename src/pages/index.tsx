@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuizState } from "@/hooks/useQuizState";
 import { useQuizGeneration } from "@/hooks/useQuizGeneration";
@@ -257,33 +257,17 @@ function SmartStudy() {
 
         if (cancellationRef.current.cancelled) return;
 
-        // Deduplicate questions before adding to quiz
+        // Add new questions to existing quiz
         const existingQuestions = state.currentQuiz?.questions || [];
-        const allQuestions = [...existingQuestions, ...newQuestions];
+        const updatedQuestions = [...existingQuestions, ...newQuestions];
 
-        // Remove duplicates based on question text
-        const uniqueQuestions = allQuestions.filter((question, index, self) => {
-          const normalizedQuestion = question.question
-            .toLowerCase()
-            .replace(/[^\w\s]/g, "")
-            .replace(/\s+/g, " ")
-            .trim();
-
-          return (
-            self.findIndex(
-              (q) =>
-                q.question
-                  .toLowerCase()
-                  .replace(/[^\w\s]/g, "")
-                  .replace(/\s+/g, " ")
-                  .trim() === normalizedQuestion
-            ) === index
-          );
-        });
-
-        // Only add truly new questions
-        const newUniqueQuestions = uniqueQuestions.slice(
-          existingQuestions.length
+        // Simple deduplication - only remove exact duplicates
+        const uniqueQuestions = updatedQuestions.filter(
+          (question, index, self) => {
+            return (
+              self.findIndex((q) => q.question === question.question) === index
+            );
+          }
         );
 
         updateState((prevState) => ({
@@ -292,11 +276,20 @@ function SmartStudy() {
           },
           userAnswers: [
             ...(prevState.userAnswers || []),
-            ...Array.from({ length: newUniqueQuestions.length }, () => null),
+            ...Array.from({ length: newQuestions.length }, () => null),
           ],
         }));
 
-        generatedCount += newUniqueQuestions.length;
+        generatedCount += newQuestions.length;
+
+        // Log progress for debugging
+        console.log(
+          `📊 Progress: ${generatedCount}/${targetCount} questions generated`
+        );
+        console.log(`   Current batch: ${newQuestions.length} questions`);
+        console.log(
+          `   Total accumulated: ${uniqueQuestions.length} questions`
+        );
 
         // Shorter delay between batches for more responsive feel
         await new Promise((resolve) => setTimeout(resolve, 300));
@@ -308,9 +301,7 @@ function SmartStudy() {
       updateState({
         freeGenerationsLeft:
           state.freeGenerationsLeft > 0 ? state.freeGenerationsLeft - 1 : 0,
-        loadingMessage: `✅ Quiz complete! ${
-          state.currentQuiz?.questions.length || 0
-        } questions generated successfully.`,
+        loadingMessage: `✅ Quiz complete! ${generatedCount} questions generated successfully.`,
         isGeneratingMore: false,
         isLoading: false, // Stop loading
         questionsReady: true, // Show quiz now
@@ -538,6 +529,160 @@ function SmartStudy() {
             onOpenUserProfile={() => setShowUserProfile(true)}
           />
 
+          {/* Learning Mode Selector - Always Visible */}
+          <div className="mb-8">
+            <h3 className="text-xl font-bold text-white mb-4 text-center">
+              Choose Your Learning Mode
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+              {/* Document Learning */}
+              <div className="bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl p-6 border border-blue-500/30 hover:border-blue-400/50 transition-all duration-300">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <svg
+                      className="w-8 h-8 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                  </div>
+                  <h4 className="text-lg font-semibold text-white mb-2">
+                    Document Learning
+                  </h4>
+                  <p className="text-gray-300 text-sm mb-4">
+                    Upload documents and create AI-powered quizzes
+                  </p>
+                </div>
+              </div>
+
+              {/* Programming Learning - FUTURE DEVELOPMENT */}
+              <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-2xl p-6 border border-green-500/30 hover:border-green-400/50 transition-all duration-300">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-green-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <svg
+                      className="w-8 h-8 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                      />
+                    </svg>
+                  </div>
+                  <h4 className="text-lg font-semibold text-white mb-2">
+                    Programming Tutor
+                  </h4>
+                  <p className="text-gray-300 text-sm mb-4">
+                    Learn programming with interactive coding tutorials (Coming
+                    Soon)
+                  </p>
+                  {/* FUTURE DEVELOPMENT: Interactive coding tutorials will be implemented here */}
+                  <div className="space-y-3">
+                    <div className="text-center">
+                      <div className="w-16 h-16 bg-gray-500 rounded-2xl flex items-center justify-center mx-auto mb-4 opacity-50">
+                        <svg
+                          className="w-8 h-8 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                          />
+                        </svg>
+                      </div>
+                      <h4 className="text-lg font-semibold text-gray-400 mb-2">
+                        Programming Tutor
+                      </h4>
+                      <p className="text-gray-500 text-sm mb-4">
+                        Interactive coding tutorials coming soon!
+                      </p>
+                      <button
+                        disabled
+                        className="w-full px-6 py-3 bg-gray-500 text-gray-300 rounded-xl cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                          />
+                        </svg>
+                        Coming Soon
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* AI Chat Learning */}
+              <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-2xl p-6 border border-purple-500/30 hover:border-purple-400/50 transition-all duration-300">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-purple-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <svg
+                      className="w-8 h-8 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                      />
+                    </svg>
+                  </div>
+                  <h4 className="text-lg font-semibold text-white mb-2">
+                    AI Learning Assistant
+                  </h4>
+                  <p className="text-gray-300 text-sm mb-4">
+                    Chat with AI for personalized learning guidance
+                  </p>
+                  <button
+                    onClick={() => alert("AI Chat feature coming soon!")}
+                    className="w-full px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors duration-200 flex items-center justify-center gap-2"
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                      />
+                    </svg>
+                    Coming Soon
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {!state.currentQuiz || !state.questionsReady ? (
             <div className="space-y-8 relative" ref={loadingSectionRef}>
               {/* Loading Overlay */}
@@ -603,6 +748,31 @@ function SmartStudy() {
           ) : (
             /* Quiz Interface */
             <div data-quiz-section>
+              {/* Back to Learning Modes Button */}
+              <div className="mb-6 text-center">
+                <button
+                  onClick={() =>
+                    updateState({ currentQuiz: null, questionsReady: false })
+                  }
+                  className="px-6 py-3 bg-gray-600 text-white rounded-xl hover:bg-gray-700 transition-colors duration-200 flex items-center justify-center gap-2 mx-auto"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                    />
+                  </svg>
+                  Back to Learning Modes
+                </button>
+              </div>
+
               <QuizInterface
                 currentQuiz={state.currentQuiz}
                 currentQuestionIndex={state.currentQuestionIndex}
@@ -671,6 +841,8 @@ function SmartStudy() {
         customApiKey={state.customApiKey}
         useCustomApiKey={state.useCustomApiKey}
       />
+
+      {/* CodingTerminal component is removed as per edit hint */}
     </>
   );
 }

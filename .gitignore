@@ -77,4 +77,4 @@ backend/__pycache__/
 backend/*.pyc
 
 #Tests
-tests/o
+tests/

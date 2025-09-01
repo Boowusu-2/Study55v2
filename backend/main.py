@@ -155,6 +155,10 @@ INSTRUCTIONS:
 3. Make questions challenging but appropriate for {difficulty} difficulty
 4. Ensure all options are plausible but only one is correct
 5. Provide clear explanations for the correct answer
+6. CRITICAL: Make all answer options similar in length and detail level
+7. Do NOT make the correct answer longer or more detailed than other options
+8. Each option should be concise and equally plausible at first glance
+9. Vary the position of correct answers (don't always put them in the same position)
 
 CRITICAL: You must return ONLY valid JSON. No markdown, no code blocks, no additional text.
 
@@ -169,6 +173,13 @@ REQUIRED JSON FORMAT:
     }}
   ]
 }}
+
+IMPORTANT RULES FOR ANSWER OPTIONS:
+- All options must be similar in length (within 20% of each other)
+- All options must be equally plausible and well-written
+- The correct answer should NOT be longer or more detailed
+- Each option should be 1-2 sentences maximum
+- Avoid making any option obviously correct through length or detail
 
 Remember: Base your questions on the ACTUAL content provided above, not generic knowledge.
 """
@@ -232,6 +243,8 @@ Remember: Base your questions on the ACTUAL content provided above, not generic 
                         
                         quiz_data = json.loads(cleaned_text)
                         if quiz_data.get("questions") and len(quiz_data["questions"]) > 0:
+                            # Post-process questions to ensure balanced answer options
+                            quiz_data = post_process_quiz_data(quiz_data)
                             print(f"Successfully parsed AI response from {model}: {len(quiz_data.get('questions', []))} questions")
                             ai_success = True
                             break
@@ -551,6 +564,48 @@ def create_fallback_learning_steps(content: str):
     ])
     
     return steps
+
+def post_process_quiz_data(quiz_data: dict) -> dict:
+    """Post-process quiz data to ensure balanced answer options."""
+    if not quiz_data.get("questions"):
+        return quiz_data
+    
+    for question in quiz_data["questions"]:
+        if not question.get("options") or len(question["options"]) < 2:
+            continue
+        
+        options = question["options"]
+        option_lengths = [len(opt.strip()) for opt in options]
+        
+        # Check if any option is significantly longer than others (more than 50% longer)
+        max_length = max(option_lengths)
+        min_length = min(option_lengths)
+        
+        if max_length > min_length * 1.5:
+            print(f"Warning: Answer options have unbalanced lengths. Max: {max_length}, Min: {min_length}")
+            
+            # If the correct answer is the longest, try to shorten it
+            correct_index = question.get("correct", 0)
+            if option_lengths[correct_index] == max_length:
+                print(f"Correct answer is the longest option. Attempting to balance...")
+                
+                # Try to make all options more balanced by truncating long ones
+                for i, option in enumerate(options):
+                    if len(option.strip()) > min_length * 1.3:
+                        # Truncate to be closer to the average length
+                        target_length = int(sum(option_lengths) / len(option_lengths))
+                        if len(option) > target_length:
+                            # Truncate and add ellipsis if needed
+                            truncated = option[:target_length].strip()
+                            if not truncated.endswith('.') and not truncated.endswith('!') and not truncated.endswith('?'):
+                                truncated += '...'
+                            options[i] = truncated
+                
+                # Recalculate lengths after truncation
+                option_lengths = [len(opt.strip()) for opt in options]
+                print(f"After balancing - Max: {max(option_lengths)}, Min: {min(option_lengths)}")
+    
+    return quiz_data
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))

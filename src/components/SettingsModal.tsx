@@ -33,12 +33,14 @@ interface SettingsModalProps {
   onUpdateApiKey: (key: string, useCustom: boolean) => void;
   quizSettings?: QuizSettings;
   onUpdateQuizSettings?: (settings: QuizSettings) => void;
-  currentQuiz?: { questions: Array<{
-    question: string;
-    options: string[];
-    correct: number;
-    explanation: string;
-  }> } | null;
+  currentQuiz?: {
+    questions: Array<{
+      question: string;
+      options: string[];
+      correct: number;
+      explanation: string;
+    }>;
+  } | null;
 }
 
 export default function SettingsModal({
@@ -55,20 +57,23 @@ export default function SettingsModal({
   currentQuiz,
 }: SettingsModalProps) {
   const { theme, setTheme } = useTheme();
-  const [activeTab, setActiveTab] = useState<"account" | "preferences" | "quiz" | "pro">(
-    "account"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "account" | "preferences" | "quiz" | "pro"
+  >("account");
   const [notifications, setNotifications] = useState(true);
   const [autoSave, setAutoSave] = useState(true);
   const [localApiKey, setLocalApiKey] = useState(customApiKey);
-  const [localUseCustomApiKey, setLocalUseCustomApiKey] = useState(useCustomApiKey);
-  const [localQuizSettings, setLocalQuizSettings] = useState<QuizSettings>(quizSettings || {
-    questionCount: 10,
-    difficulty: "medium",
-    questionType: "multiple_choice",
-    focusArea: "",
-    model: "auto",
-  });
+  const [localUseCustomApiKey, setLocalUseCustomApiKey] =
+    useState(useCustomApiKey);
+  const [localQuizSettings, setLocalQuizSettings] = useState<QuizSettings>(
+    quizSettings || {
+      questionCount: 10,
+      difficulty: "medium",
+      questionType: "multiple_choice",
+      focusArea: "",
+      model: "auto",
+    }
+  );
 
   if (!isOpen) return null;
 
@@ -205,7 +210,11 @@ export default function SettingsModal({
                 <button
                   onClick={() => {
                     // Clear all data functionality
-                    if (confirm("Are you sure you want to clear all quiz data? This action cannot be undone.")) {
+                    if (
+                      confirm(
+                        "Are you sure you want to clear all quiz data? This action cannot be undone."
+                      )
+                    ) {
                       localStorage.clear();
                       window.location.reload();
                     }
@@ -213,9 +222,7 @@ export default function SettingsModal({
                   className="w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors flex items-center gap-3"
                 >
                   <LogOut className="w-5 h-5 text-white" />
-                  <span className="text-white font-medium">
-                    Clear All Data
-                  </span>
+                  <span className="text-white font-medium">Clear All Data</span>
                 </button>
                 <button
                   onClick={() => {
@@ -242,7 +249,10 @@ export default function SettingsModal({
                 <button
                   onClick={() => {
                     // Help/Support functionality
-                    window.open("https://github.com/Boowusu-2/Study55v2", "_blank");
+                    window.open(
+                      "https://github.com/Boowusu-2/Study55v2",
+                      "_blank"
+                    );
                   }}
                   className="w-full p-4 bg-white/10 rounded-xl hover:bg-white/20 transition-colors flex items-center gap-3"
                 >
@@ -447,7 +457,9 @@ export default function SettingsModal({
                       <Shield className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-white">API Key Settings</h3>
+                      <h3 className="text-xl font-bold text-white">
+                        API Key Settings
+                      </h3>
                       <p className="text-slate-300 text-sm">
                         Use your own API key for unlimited access
                       </p>
@@ -477,12 +489,14 @@ export default function SettingsModal({
                       >
                         <div
                           className={`w-4 h-4 bg-white rounded-full transition-transform duration-200 ${
-                            localUseCustomApiKey ? "translate-x-6" : "translate-x-1"
+                            localUseCustomApiKey
+                              ? "translate-x-6"
+                              : "translate-x-1"
                           }`}
                         />
                       </button>
                     </div>
-                    
+
                     {localUseCustomApiKey && (
                       <div className="p-4 bg-white/10 rounded-xl">
                         <label className="block text-white font-medium mb-2">
@@ -492,7 +506,9 @@ export default function SettingsModal({
                           type="password"
                           value={localApiKey}
                           onChange={(e) => setLocalApiKey(e.target.value)}
-                          onBlur={() => onUpdateApiKey(localApiKey, localUseCustomApiKey)}
+                          onBlur={() =>
+                            onUpdateApiKey(localApiKey, localUseCustomApiKey)
+                          }
                           placeholder="Enter your Gemini API key"
                           className="w-full p-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-purple-400 transition-colors"
                         />
@@ -517,7 +533,9 @@ export default function SettingsModal({
                     <Target className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white">Quiz Preferences</h3>
+                    <h3 className="text-xl font-bold text-white">
+                      Quiz Preferences
+                    </h3>
                     <p className="text-slate-300 text-sm">
                       Customize your quiz generation settings
                     </p>
@@ -535,7 +553,10 @@ export default function SettingsModal({
                       max="50"
                       value={localQuizSettings.questionCount}
                       onChange={(e) => {
-                        const newSettings = { ...localQuizSettings, questionCount: parseInt(e.target.value) || 10 } as QuizSettings;
+                        const newSettings = {
+                          ...localQuizSettings,
+                          questionCount: parseInt(e.target.value) || 10,
+                        } as QuizSettings;
                         setLocalQuizSettings(newSettings);
                         onUpdateQuizSettings?.(newSettings);
                       }}
@@ -551,7 +572,14 @@ export default function SettingsModal({
                     <select
                       value={localQuizSettings.difficulty}
                       onChange={(e) => {
-                        const newSettings = { ...localQuizSettings, difficulty: e.target.value as 'easy' | 'medium' | 'hard' | 'mixed' };
+                        const newSettings = {
+                          ...localQuizSettings,
+                          difficulty: e.target.value as
+                            | "easy"
+                            | "medium"
+                            | "hard"
+                            | "mixed",
+                        };
                         setLocalQuizSettings(newSettings);
                         onUpdateQuizSettings?.(newSettings);
                       }}
@@ -571,7 +599,13 @@ export default function SettingsModal({
                     <select
                       value={localQuizSettings.questionType}
                       onChange={(e) => {
-                        const newSettings = { ...localQuizSettings, questionType: e.target.value as 'multiple_choice' | 'true_false' | 'mixed' };
+                        const newSettings = {
+                          ...localQuizSettings,
+                          questionType: e.target.value as
+                            | "multiple_choice"
+                            | "true_false"
+                            | "mixed",
+                        };
                         setLocalQuizSettings(newSettings);
                         onUpdateQuizSettings?.(newSettings);
                       }}
@@ -592,7 +626,10 @@ export default function SettingsModal({
                       type="text"
                       value={localQuizSettings.focusArea}
                       onChange={(e) => {
-                        const newSettings = { ...localQuizSettings, focusArea: e.target.value };
+                        const newSettings = {
+                          ...localQuizSettings,
+                          focusArea: e.target.value,
+                        };
                         setLocalQuizSettings(newSettings);
                         onUpdateQuizSettings?.(newSettings);
                       }}
@@ -611,7 +648,9 @@ export default function SettingsModal({
                       <Download className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-white">Export Quiz</h3>
+                      <h3 className="text-xl font-bold text-white">
+                        Export Quiz
+                      </h3>
                       <p className="text-slate-300 text-sm">
                         Download your current quiz data
                       </p>
@@ -632,7 +671,9 @@ export default function SettingsModal({
                         const url = URL.createObjectURL(dataBlob);
                         const link = document.createElement("a");
                         link.href = url;
-                        link.download = `quiz-${new Date().toISOString().split('T')[0]}.json`;
+                        link.download = `quiz-${
+                          new Date().toISOString().split("T")[0]
+                        }.json`;
                         document.body.appendChild(link);
                         link.click();
                         document.body.removeChild(link);
@@ -648,23 +689,39 @@ export default function SettingsModal({
                     <button
                       onClick={() => {
                         const csvData = [
-                          ['Question', 'Option A', 'Option B', 'Option C', 'Option D', 'Correct Answer', 'Explanation'],
-                          ...currentQuiz.questions.map(q => [
+                          [
+                            "Question",
+                            "Option A",
+                            "Option B",
+                            "Option C",
+                            "Option D",
+                            "Correct Answer",
+                            "Explanation",
+                          ],
+                          ...currentQuiz.questions.map((q) => [
                             q.question,
                             q.options[0],
                             q.options[1],
                             q.options[2],
                             q.options[3],
                             q.options[q.correct],
-                            q.explanation
-                          ])
+                            q.explanation,
+                          ]),
                         ];
-                        const csvContent = csvData.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-                        const dataBlob = new Blob([csvContent], { type: 'text/csv' });
+                        const csvContent = csvData
+                          .map((row) =>
+                            row.map((cell) => `"${cell}"`).join(",")
+                          )
+                          .join("\n");
+                        const dataBlob = new Blob([csvContent], {
+                          type: "text/csv",
+                        });
                         const url = URL.createObjectURL(dataBlob);
                         const link = document.createElement("a");
                         link.href = url;
-                        link.download = `quiz-${new Date().toISOString().split('T')[0]}.csv`;
+                        link.download = `quiz-${
+                          new Date().toISOString().split("T")[0]
+                        }.csv`;
                         document.body.appendChild(link);
                         link.click();
                         document.body.removeChild(link);
@@ -785,8 +842,8 @@ export default function SettingsModal({
           )}
 
           {/* Account Settings */}
-          <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/20">
-            <h3 className="text-xl font-bold text-white mb-4">
+          <div className="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 m-6 border border-white/20">
+            <h3 className="text-xl font-bold text-white m-6">
               Account Settings
             </h3>
             <div className="space-y-4">
