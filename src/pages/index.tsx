@@ -142,6 +142,17 @@ function SmartStudy() {
         questionsReady: true, // Show questions immediately
       });
 
+      // Auto-scroll to quiz interface immediately
+      setTimeout(() => {
+        const quizSection = document.querySelector('[data-quiz-section]');
+        if (quizSection) {
+          quizSection.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }
+      }, 100);
+
       // Generate questions in smaller batches for real-time updates
       const batchSize = 3; // Smaller batches for more frequent updates
       let generatedCount = 0;
@@ -242,18 +253,18 @@ function SmartStudy() {
         if (cancellationRef.current.cancelled) return;
 
         // Add new questions to existing quiz and update immediately
-        updateState({
+        updateState((prevState) => ({
           currentQuiz: {
             questions: [
-              ...(state.currentQuiz?.questions || []),
+              ...(prevState.currentQuiz?.questions || []),
               ...newQuestions,
             ],
           },
           userAnswers: [
-            ...(state.userAnswers || []),
+            ...(prevState.userAnswers || []),
             ...Array.from({ length: newQuestions.length }, () => null),
           ],
-        });
+        }));
 
         generatedCount += newQuestions.length;
 
@@ -273,6 +284,17 @@ function SmartStudy() {
         isGeneratingMore: false,
         questionsReady: true,
       });
+
+      // Auto-scroll to quiz interface after a short delay
+      setTimeout(() => {
+        const quizSection = document.querySelector('[data-quiz-section]');
+        if (quizSection) {
+          quizSection.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }
+      }, 500);
     } catch (error) {
       console.error("Quiz generation error:", error);
 
@@ -548,7 +570,8 @@ function SmartStudy() {
             </div>
           ) : (
             /* Quiz Interface */
-            <QuizInterface
+            <div data-quiz-section>
+              <QuizInterface
               currentQuiz={state.currentQuiz}
               currentQuestionIndex={state.currentQuestionIndex}
               userAnswers={state.userAnswers}
@@ -567,6 +590,7 @@ function SmartStudy() {
               onResetQuiz={resetQuiz}
               onCancelGeneration={handleCancelGeneration}
             />
+            </div>
           )}
         </div>
       </div>

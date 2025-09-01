@@ -99,8 +99,12 @@ export function useQuizState() {
     }
   }, [state.currentQuiz, setSavedQuiz]);
 
-  const updateState = useCallback((updates: Partial<SmartStudyState>) => {
-    setState((prev) => ({ ...prev, ...updates }));
+  const updateState = useCallback((updates: Partial<SmartStudyState> | ((prev: SmartStudyState) => Partial<SmartStudyState>)) => {
+    if (typeof updates === 'function') {
+      setState((prev) => ({ ...prev, ...updates(prev) }));
+    } else {
+      setState((prev) => ({ ...prev, ...updates }));
+    }
   }, []);
 
   const resetQuiz = useCallback(() => {
