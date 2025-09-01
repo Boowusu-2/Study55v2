@@ -144,7 +144,7 @@ function SmartStudy() {
 
       // Auto-scroll to quiz interface immediately
       setTimeout(() => {
-        const quizSection = document.querySelector('[data-quiz-section]');
+        const quizSection = document.querySelector("[data-quiz-section]");
         if (quizSection) {
           quizSection.scrollIntoView({
             behavior: "smooth",
@@ -287,7 +287,7 @@ function SmartStudy() {
 
       // Auto-scroll to quiz interface after a short delay
       setTimeout(() => {
-        const quizSection = document.querySelector('[data-quiz-section]');
+        const quizSection = document.querySelector("[data-quiz-section]");
         if (quizSection) {
           quizSection.scrollIntoView({
             behavior: "smooth",
@@ -572,24 +572,24 @@ function SmartStudy() {
             /* Quiz Interface */
             <div data-quiz-section>
               <QuizInterface
-              currentQuiz={state.currentQuiz}
-              currentQuestionIndex={state.currentQuestionIndex}
-              userAnswers={state.userAnswers}
-              selectedAnswer={state.selectedAnswer}
-              showResult={state.showResult}
-              quizComplete={state.quizComplete}
-              isGeneratingMore={state.isGeneratingMore}
-              targetQuestionCount={state.targetQuestionCount}
-              isCancelling={state.isCancelling}
-              loadingMessage={state.loadingMessage}
-              isOfflineMode={state.isOfflineMode}
-              onSelectAnswer={handleSelectAnswer}
-              onNextQuestion={handleNextQuestion}
-              onPreviousQuestion={handlePreviousQuestion}
-              onSkipQuestion={handleSkipQuestion}
-              onResetQuiz={resetQuiz}
-              onCancelGeneration={handleCancelGeneration}
-            />
+                currentQuiz={state.currentQuiz}
+                currentQuestionIndex={state.currentQuestionIndex}
+                userAnswers={state.userAnswers}
+                selectedAnswer={state.selectedAnswer}
+                showResult={state.showResult}
+                quizComplete={state.quizComplete}
+                isGeneratingMore={state.isGeneratingMore}
+                targetQuestionCount={state.targetQuestionCount}
+                isCancelling={state.isCancelling}
+                loadingMessage={state.loadingMessage}
+                isOfflineMode={state.isOfflineMode}
+                onSelectAnswer={handleSelectAnswer}
+                onNextQuestion={handleNextQuestion}
+                onPreviousQuestion={handlePreviousQuestion}
+                onSkipQuestion={handleSkipQuestion}
+                onResetQuiz={resetQuiz}
+                onCancelGeneration={handleCancelGeneration}
+              />
             </div>
           )}
         </div>
