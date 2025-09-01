@@ -620,7 +620,9 @@ function SmartStudy() {
         onUpgradeToPro={handleUpgradeToPro}
         customApiKey={state.customApiKey}
         useCustomApiKey={state.useCustomApiKey}
-        onUpdateApiKey={(key, useCustom) => updateState({ customApiKey: key, useCustomApiKey: useCustom })}
+        onUpdateApiKey={(key, useCustom) =>
+          updateState({ customApiKey: key, useCustomApiKey: useCustom })
+        }
       />
 
       <PaymentModal
