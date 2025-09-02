@@ -510,7 +510,7 @@ User's current question: {message}
 
 INSTRUCTIONS:
 1. Provide a clear, comprehensive answer that addresses the user's question
-2. Use simple language that a 10-year-old could understand
+2. Use simple language that any person can understand
 3. Include relevant examples, analogies, and real-world applications
 4. If the question relates to the current topic, make connections to that context
 5. Be encouraging and supportive - learning is a journey

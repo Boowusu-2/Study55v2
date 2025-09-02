@@ -47,12 +47,30 @@ What would you like to explore?`,
   const inputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "end",
+        inline: "nearest",
+      });
+    }
+    // Also try to scroll the container directly
+    const container = document.querySelector('.overflow-y-auto');
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
   };
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Force scroll to bottom when component mounts or opens
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => scrollToBottom(), 100);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -168,7 +186,7 @@ What would you like to explore?`,
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-slate-900 rounded-3xl shadow-2xl w-full max-w-7xl h-[90vh] flex flex-col border border-slate-700 overflow-hidden">
+      <div className="bg-slate-900 rounded-3xl shadow-2xl w-full max-w-7xl h-[90vh] flex flex-col border border-slate-700">
         {/* Header */}
         <div className="flex items-center justify-between p-8 border-b border-slate-700 bg-slate-800">
           <div className="flex items-center gap-3">
@@ -195,8 +213,9 @@ What would you like to explore?`,
         </div>
 
         {/* Messages Container - Fixed height with proper scrolling */}
-        <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-slate-900">
-          {messages.map((message) => (
+        <div className="flex-1 min-h-0 bg-slate-900 relative">
+          <div className="absolute inset-0 p-8 space-y-6 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
+            {messages.map((message) => (
             <div
               key={message.id}
               className={`flex gap-3 ${
@@ -210,14 +229,23 @@ What would you like to explore?`,
               )}
 
               <div
-                className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                className={`max-w-[85%] rounded-2xl px-6 py-4 ${
                   message.role === "user"
                     ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white"
-                    : "bg-slate-800 text-slate-100 border border-slate-600"
+                    : "bg-slate-800 text-slate-100 border border-slate-600 shadow-lg"
                 }`}
               >
-                <div className="whitespace-pre-wrap break-words leading-relaxed">
-                  {message.content}
+                <div className="prose prose-invert max-w-none">
+                  <div
+                    className="whitespace-pre-wrap break-words leading-relaxed text-slate-100"
+                    dangerouslySetInnerHTML={{
+                      __html: message.content
+                        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                        .replace(/\*(.*?)\*/g, "<em>$1</em>")
+                        .replace(/•/g, "•")
+                        .replace(/\n/g, "<br />"),
+                    }}
+                  />
                 </div>
                 {message.relatedConcepts &&
                   message.relatedConcepts.length > 0 && (
@@ -268,48 +296,49 @@ What would you like to explore?`,
           )}
 
           <div ref={messagesEndRef} />
+          </div>
         </div>
 
-                       {/* Input Section - Fixed at bottom */}
-               <div className="p-8 border-t border-slate-700 bg-slate-800">
+        {/* Input Section - Fixed at bottom */}
+        <div className="p-8 border-t border-slate-700 bg-slate-800">
           <div className="flex gap-3">
-                               <input
-                     ref={inputRef}
-                     type="text"
-                     value={inputMessage}
-                     onChange={(e) => setInputMessage(e.target.value)}
-                     onKeyPress={handleKeyPress}
-                     placeholder="Ask me anything about learning, studying, or any subject..."
-                     className="flex-1 px-6 py-4 bg-slate-700 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
-                     disabled={isLoading}
-                   />
-                               <button
-                     onClick={handleSendMessage}
-                     disabled={!inputMessage.trim() || isLoading}
-                     className="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 text-lg font-semibold"
-                   >
+            <input
+              ref={inputRef}
+              type="text"
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Ask me anything about learning, studying, or any subject..."
+              className="flex-1 px-6 py-4 bg-slate-700 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+              disabled={isLoading}
+            />
+            <button
+              onClick={handleSendMessage}
+              disabled={!inputMessage.trim() || isLoading}
+              className="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 text-lg font-semibold"
+            >
               <Send className="w-4 h-4" />
               Send
             </button>
           </div>
 
-                           {/* Quick Suggestions */}
-                 <div className="mt-6 flex flex-wrap gap-3">
-                   {[
-                     "How can I improve my memory?",
-                     "What are effective study techniques?",
-                     "How do I stay focused while studying?",
-                     "Can you explain this concept simply?",
-                   ].map((suggestion) => (
-                     <button
-                       key={suggestion}
-                       onClick={() => setInputMessage(suggestion)}
-                       className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm rounded-lg transition-colors border border-slate-600"
-                     >
-                       {suggestion}
-                     </button>
-                   ))}
-                 </div>
+          {/* Quick Suggestions */}
+          <div className="mt-6 flex flex-wrap gap-3">
+            {[
+              "How can I improve my memory?",
+              "What are effective study techniques?",
+              "How do I stay focused while studying?",
+              "Can you explain this concept simply?",
+            ].map((suggestion) => (
+              <button
+                key={suggestion}
+                onClick={() => setInputMessage(suggestion)}
+                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm rounded-lg transition-colors border border-slate-600"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>
