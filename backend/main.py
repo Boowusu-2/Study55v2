@@ -175,11 +175,13 @@ REQUIRED JSON FORMAT:
 }}
 
 IMPORTANT RULES FOR ANSWER OPTIONS:
-- All options must be similar in length (within 20% of each other)
+- All options must be similar in length iin terms of the number of words
 - All options must be equally plausible and well-written
-- The correct answer should NOT be longer or more detailed
+- The correct answer should NOT be longer or more detailed and consistently be one option (especilly option c).
 - Each option should be 1-2 sentences maximum
 - Avoid making any option obviously correct through length or detail
+-NEVER truncate content with ellipses - provide complete, comprehensive answers
+
 
 Remember: Base your questions on the ACTUAL content provided above, not generic knowledge.
 """
@@ -309,7 +311,7 @@ DOCUMENT CONTENT:
 {content}
 
 INSTRUCTIONS:
-1. Create 4-5 learning steps that progressively build understanding
+1. Create a number of learning steps that progressively build understanding it should cover every thing in the document
 2. Each step should focus on specific concepts from the document
 3. Include a mix of explanations, examples, and practice questions
 4. Make the content engaging and educational
@@ -515,12 +517,11 @@ INSTRUCTIONS:
 6. If appropriate, suggest related concepts or next steps for learning
 7. Keep responses conversational and engaging
 8. If the question is about learning techniques, provide practical, actionable advice
-9. NEVER truncate content with ellipses - provide complete, comprehensive answers
 
 RESPONSE FORMAT:
 Provide a helpful, educational response that directly answers the user's question. Use clear language, examples, and encouragement. If relevant, suggest related topics or learning strategies.
 
-Remember: You're a patient tutor who wants to help the user succeed. Make learning accessible and enjoyable! Provide complete, comprehensive answers without any truncation.
+Remember: You're a patient tutor who wants to help the user succeed. Make learning accessible and enjoyable! Provide complete, comprehensive answers.
 """
         
         # Call Gemini API with multiple retries and different models
@@ -549,7 +550,7 @@ Remember: You're a patient tutor who wants to help the user succeed. Make learni
                     }],
                     "generationConfig": {
                         "temperature": 0.7,  # Slightly higher for more creative responses
-                        "maxOutputTokens": 8192,  # Increased to prevent truncation
+                        "maxOutputTokens": 8192,
                     }
                 }
                 
@@ -747,47 +748,7 @@ def create_fallback_learning_steps(content: str):
     
     return steps
 
-def post_process_quiz_data(quiz_data: dict) -> dict:
-    """Post-process quiz data to ensure balanced answer options."""
-    if not quiz_data.get("questions"):
-        return quiz_data
-    
-    for question in quiz_data["questions"]:
-        if not question.get("options") or len(question["options"]) < 2:
-            continue
-        
-        options = question["options"]
-        option_lengths = [len(opt.strip()) for opt in options]
-        
-        # Check if any option is significantly longer than others (more than 50% longer)
-        max_length = max(option_lengths)
-        min_length = min(option_lengths)
-        
-        if max_length > min_length * 1.5:
-            print(f"Warning: Answer options have unbalanced lengths. Max: {max_length}, Min: {min_length}")
-            
-            # If the correct answer is the longest, try to shorten it
-            correct_index = question.get("correct", 0)
-            if option_lengths[correct_index] == max_length:
-                print(f"Correct answer is the longest option. Attempting to balance...")
-                
-                # Try to make all options more balanced by truncating long ones
-                for i, option in enumerate(options):
-                    if len(option.strip()) > min_length * 1.3:
-                        # Truncate to be closer to the average length
-                        target_length = int(sum(option_lengths) / len(option_lengths))
-                        if len(option) > target_length:
-                            # Truncate and add ellipsis if needed
-                            truncated = option[:target_length].strip()
-                            if not truncated.endswith('.') and not truncated.endswith('!') and not truncated.endswith('?'):
-                                truncated += '...'
-                            options[i] = truncated
-                
-                # Recalculate lengths after truncation
-                option_lengths = [len(opt.strip()) for opt in options]
-                print(f"After balancing - Max: {max(option_lengths)}, Min: {min(option_lengths)}")
-    
-    return quiz_data
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
