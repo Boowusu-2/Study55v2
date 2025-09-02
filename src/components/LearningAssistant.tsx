@@ -168,9 +168,9 @@ What would you like to explore?`,
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-slate-900 rounded-3xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col border border-slate-700 overflow-hidden">
+      <div className="bg-slate-900 rounded-3xl shadow-2xl w-full max-w-7xl h-[90vh] flex flex-col border border-slate-700 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-700 bg-slate-800">
+        <div className="flex items-center justify-between p-8 border-b border-slate-700 bg-slate-800">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
               <Bot className="w-5 h-5 text-white" />
@@ -195,7 +195,7 @@ What would you like to explore?`,
         </div>
 
         {/* Messages Container - Fixed height with proper scrolling */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-900">
+        <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-slate-900">
           {messages.map((message) => (
             <div
               key={message.id}
@@ -270,46 +270,46 @@ What would you like to explore?`,
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Section - Fixed at bottom */}
-        <div className="p-6 border-t border-slate-700 bg-slate-800">
+                       {/* Input Section - Fixed at bottom */}
+               <div className="p-8 border-t border-slate-700 bg-slate-800">
           <div className="flex gap-3">
-            <input
-              ref={inputRef}
-              type="text"
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Ask me anything about learning, studying, or any subject..."
-              className="flex-1 px-4 py-3 bg-slate-700 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              disabled={isLoading}
-            />
-            <button
-              onClick={handleSendMessage}
-              disabled={!inputMessage.trim() || isLoading}
-              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2"
-            >
+                               <input
+                     ref={inputRef}
+                     type="text"
+                     value={inputMessage}
+                     onChange={(e) => setInputMessage(e.target.value)}
+                     onKeyPress={handleKeyPress}
+                     placeholder="Ask me anything about learning, studying, or any subject..."
+                     className="flex-1 px-6 py-4 bg-slate-700 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                     disabled={isLoading}
+                   />
+                               <button
+                     onClick={handleSendMessage}
+                     disabled={!inputMessage.trim() || isLoading}
+                     className="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 text-lg font-semibold"
+                   >
               <Send className="w-4 h-4" />
               Send
             </button>
           </div>
 
-          {/* Quick Suggestions */}
-          <div className="mt-4 flex flex-wrap gap-2">
-            {[
-              "How can I improve my memory?",
-              "What are effective study techniques?",
-              "How do I stay focused while studying?",
-              "Can you explain this concept simply?",
-            ].map((suggestion) => (
-              <button
-                key={suggestion}
-                onClick={() => setInputMessage(suggestion)}
-                className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded-lg transition-colors border border-slate-600"
-              >
-                {suggestion}
-              </button>
-            ))}
-          </div>
+                           {/* Quick Suggestions */}
+                 <div className="mt-6 flex flex-wrap gap-3">
+                   {[
+                     "How can I improve my memory?",
+                     "What are effective study techniques?",
+                     "How do I stay focused while studying?",
+                     "Can you explain this concept simply?",
+                   ].map((suggestion) => (
+                     <button
+                       key={suggestion}
+                       onClick={() => setInputMessage(suggestion)}
+                       className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm rounded-lg transition-colors border border-slate-600"
+                     >
+                       {suggestion}
+                     </button>
+                   ))}
+                 </div>
         </div>
       </div>
     </div>
