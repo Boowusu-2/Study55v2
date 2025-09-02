@@ -1,18 +1,18 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   BookOpen,
+  Lightbulb,
+  Target,
+  ArrowRight,
+  ArrowLeft,
+  Loader2,
+  CheckCircle,
+  XCircle,
+  Send,
   Play,
   Pause,
   Volume2,
   VolumeX,
-  Lightbulb,
-  Target,
-  CheckCircle,
-  XCircle,
-  ArrowRight,
-  ArrowLeft,
-  Send,
-  Loader2,
 } from "lucide-react";
 
 interface LearningStep {

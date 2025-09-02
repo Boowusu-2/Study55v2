@@ -115,9 +115,9 @@ export default function QuizSettings({
                 description: "Binary questions",
               },
               {
-                value: "flashcard",
-                label: "Flashcards",
-                description: "Memory cards",
+                value: "practical_case",
+                label: "Practical Cases",
+                description: "Real-world scenarios",
               },
               {
                 value: "mixed",

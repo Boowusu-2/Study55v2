@@ -30,6 +30,9 @@ interface SmartStudyState {
   uploadProgress: number;
   customApiKey: string;
   useCustomApiKey: boolean;
+  showGuidedLearning: boolean;
+  showLearningAssistant: boolean;
+  documentContent: string;
 }
 
 const initialState: SmartStudyState = {
@@ -66,6 +69,9 @@ const initialState: SmartStudyState = {
   uploadProgress: 0,
   customApiKey: "",
   useCustomApiKey: false,
+  showGuidedLearning: false,
+  showLearningAssistant: false,
+  documentContent: "",
 };
 
 export function useQuizState() {
@@ -103,13 +109,20 @@ export function useQuizState() {
     }
   }, [state.currentQuiz, setSavedQuiz]);
 
-  const updateState = useCallback((updates: Partial<SmartStudyState> | ((prev: SmartStudyState) => Partial<SmartStudyState>)) => {
-    if (typeof updates === 'function') {
-      setState((prev) => ({ ...prev, ...updates(prev) }));
-    } else {
-      setState((prev) => ({ ...prev, ...updates }));
-    }
-  }, []);
+  const updateState = useCallback(
+    (
+      updates:
+        | Partial<SmartStudyState>
+        | ((prev: SmartStudyState) => Partial<SmartStudyState>)
+    ) => {
+      if (typeof updates === "function") {
+        setState((prev) => ({ ...prev, ...updates(prev) }));
+      } else {
+        setState((prev) => ({ ...prev, ...updates }));
+      }
+    },
+    []
+  );
 
   const resetQuiz = useCallback(() => {
     cancellationRef.current.cancelled = true;
@@ -160,7 +173,7 @@ export function useQuizState() {
           if (progress >= 100) {
             progress = 100;
             clearInterval(progressInterval);
-            
+
             // Complete upload
             setState((prev) => ({
               ...prev,

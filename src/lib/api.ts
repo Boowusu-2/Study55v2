@@ -1,4 +1,4 @@
-import { QuizData, QuizQuestion } from "@/types";
+import { QuizData, QuizQuestion, QuizSettings } from "@/types";
 
 // Retry configuration
 const MAX_RETRIES = 3;
@@ -298,26 +298,16 @@ export async function callGeminiAPI(
 }
 
 // Helper function to chunk content for diverse questions
-function chunkContent(
-  content: string,
-  batchNumber: number,
-  totalBatches: number
-): string {
+function chunkContent(content: string, maxChunkSize: number): string[] {
+  const chunks: string[] = [];
   const contentLength = content.length;
-  const chunkSize = Math.floor(contentLength / totalBatches);
-  const startIndex = (batchNumber - 1) * chunkSize;
-  const endIndex =
-    batchNumber === totalBatches ? contentLength : startIndex + chunkSize;
 
-  // Add some overlap to ensure context continuity
-  const overlap = Math.floor(chunkSize * 0.1); // 10% overlap
-  const actualStart = Math.max(0, startIndex - overlap);
-  const actualEnd = Math.min(contentLength, endIndex + overlap);
+  for (let i = 0; i < contentLength; i += maxChunkSize) {
+    const chunk = content.substring(i, i + maxChunkSize);
+    chunks.push(chunk);
+  }
 
-  const chunk = content.substring(actualStart, actualEnd);
-
-  // Add context about which part of the document this is
-  return `[Section ${batchNumber} of ${totalBatches}] ${chunk}`;
+  return chunks;
 }
 
 // New function to handle large question counts by splitting requests
@@ -371,7 +361,10 @@ export async function callGeminiAPIWithSplitting(
     );
 
     // Get a different chunk of content for each batch to ensure diversity
-    const contentChunk = chunkContent(content, batchNumber, batches);
+    const contentChunk = content.substring(
+      (batchNumber - 1) * Math.floor(content.length / batches),
+      batchNumber * Math.floor(content.length / batches)
+    );
 
     let retryCount = 0;
     const maxRetries = 3;
@@ -631,4 +624,153 @@ function deduplicateQuestions(questions: QuizQuestion[]): QuizQuestion[] {
   }
 
   return unique;
+}
+
+// Function to shuffle array (Fisher-Yates algorithm)
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+// Function to randomize quiz options and update correct answer index
+function randomizeQuizOptions(question: QuizQuestion): QuizQuestion {
+  if (!question.options || question.options.length === 0) {
+    return question;
+  }
+
+  // Shuffle the options
+  const shuffledOptions = shuffleArray(question.options);
+
+  // Find the new position of the correct answer
+  const correctAnswer = question.options[question.correct];
+  const newCorrectIndex = shuffledOptions.indexOf(correctAnswer);
+
+  return {
+    ...question,
+    options: shuffledOptions,
+    correct: newCorrectIndex,
+  };
+}
+
+export async function generateQuiz(
+  documentContent: string,
+  settings: QuizSettings,
+  customApiKey?: string,
+  useCustomApiKey?: boolean
+): Promise<QuizData> {
+  console.log("Generating quiz with settings:", settings);
+  console.log("Document content length:", documentContent.length);
+
+  // Chunk the document content if it's too long
+  const maxChunkSize = 8000; // Reduced from 10000 to ensure better processing
+  const chunks = chunkContent(documentContent, maxChunkSize);
+  console.log(`Document split into ${chunks.length} chunks`);
+
+  let allQuestions: QuizQuestion[] = [];
+  let attempts = 0;
+  const maxAttempts = 3;
+
+  while (
+    allQuestions.length < settings.questionCount &&
+    attempts < maxAttempts
+  ) {
+    attempts++;
+    console.log(`Attempt ${attempts}: Generating questions...`);
+
+    try {
+      // Generate questions from each chunk
+      const chunkPromises = chunks.map(async (chunk, chunkIndex) => {
+        const questionsPerChunk = Math.ceil(
+          settings.questionCount / chunks.length
+        );
+        console.log(
+          `Chunk ${chunkIndex + 1}: Generating ${questionsPerChunk} questions`
+        );
+
+        const response = await fetch(
+          "https://study55v2-production-09c8.up.railway.app/generate-quiz",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              documentContent: chunk,
+              questionCount: questionsPerChunk,
+              difficulty: settings.difficulty,
+              questionType: settings.questionType,
+              focusArea: settings.focusArea,
+              model: settings.model,
+              customApiKey: useCustomApiKey ? customApiKey : undefined,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log(`Chunk ${chunkIndex + 1} response:`, data);
+
+        if (data.questions && Array.isArray(data.questions)) {
+          // Randomize the options for each question
+          const randomizedQuestions = data.questions.map(randomizeQuizOptions);
+          return randomizedQuestions;
+        } else {
+          console.warn(`Chunk ${chunkIndex + 1}: Invalid response format`);
+          return [];
+        }
+      });
+
+      const chunkResults = await Promise.all(chunkPromises);
+      const newQuestions = chunkResults.flat();
+
+      // Remove duplicates based on question content
+      const uniqueQuestions = deduplicateQuestions([
+        ...allQuestions,
+        ...newQuestions,
+      ]);
+
+      // Update the questions array
+      allQuestions = uniqueQuestions;
+
+      console.log(
+        `Total questions after attempt ${attempts}: ${allQuestions.length}`
+      );
+
+      // If we have enough questions, break
+      if (allQuestions.length >= settings.questionCount) {
+        break;
+      }
+
+      // Wait a bit before retrying
+      if (attempts < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    } catch (error) {
+      console.error(`Attempt ${attempts} failed:`, error);
+
+      if (attempts === maxAttempts) {
+        throw new Error(
+          `Failed to generate quiz after ${maxAttempts} attempts: ${error}`
+        );
+      }
+    }
+  }
+
+  // Ensure we have the exact number of questions requested
+  if (allQuestions.length > settings.questionCount) {
+    allQuestions = allQuestions.slice(0, settings.questionCount);
+  }
+
+  // Final randomization of all questions to ensure variety
+  allQuestions = shuffleArray(allQuestions);
+
+  console.log(`Final quiz generated with ${allQuestions.length} questions`);
+  return { questions: allQuestions };
 }

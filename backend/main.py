@@ -459,6 +459,188 @@ Return a simple JSON response with guidance.
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Guided learning failed: {str(e)}")
 
+@app.post("/learning-assistant")
+async def learning_assistant(request: dict):
+    """
+    Provide general learning assistance and answer questions about any subject.
+    """
+    try:
+        message = request.get("message", "")
+        conversation_history = request.get("conversationHistory", [])
+        current_topic = request.get("currentTopic", "")
+        custom_api_key = request.get("customApiKey", "")
+        
+        if not message:
+            raise HTTPException(status_code=400, detail="Message is required")
+        
+        # Use custom API key if provided, otherwise use server keys
+        if custom_api_key:
+            api_key = custom_api_key
+            print(f"Using custom API key for learning assistant: {custom_api_key[:10]}...")
+        else:
+            # Get API keys from server
+            gemini_keys = get_gemini_api_keys()
+            if not gemini_keys:
+                raise HTTPException(status_code=500, detail="No Gemini API keys configured")
+            api_key = gemini_keys[0]
+        
+        # Create context-aware prompt
+        context = ""
+        if current_topic:
+            context = f"Context: The user is currently studying or interested in: {current_topic}\n\n"
+        
+        # Build conversation history context
+        history_context = ""
+        if conversation_history and len(conversation_history) > 0:
+            recent_messages = conversation_history[-5:]  # Last 5 messages for context
+            history_context = "Recent conversation context:\n"
+            for msg in recent_messages:
+                role = "User" if msg.get("role") == "user" else "Assistant"
+                history_context += f"{role}: {msg.get('content', '')}\n"
+            history_context += "\n"
+        
+        prompt = f"""
+You are an expert AI Learning Assistant, a patient and knowledgeable tutor who can explain any concept in simple, engaging terms. Your goal is to help students learn and understand any subject, regardless of complexity.
+
+{context}
+{history_context}
+User's current question: {message}
+
+INSTRUCTIONS:
+1. Provide a clear, comprehensive answer that addresses the user's question
+2. Use simple language that a 10-year-old could understand
+3. Include relevant examples, analogies, and real-world applications
+4. If the question relates to the current topic, make connections to that context
+5. Be encouraging and supportive - learning is a journey
+6. If appropriate, suggest related concepts or next steps for learning
+7. Keep responses conversational and engaging
+8. If the question is about learning techniques, provide practical, actionable advice
+9. NEVER truncate content with ellipses - provide complete, comprehensive answers
+
+RESPONSE FORMAT:
+Provide a helpful, educational response that directly answers the user's question. Use clear language, examples, and encouragement. If relevant, suggest related topics or learning strategies.
+
+Remember: You're a patient tutor who wants to help the user succeed. Make learning accessible and enjoyable! Provide complete, comprehensive answers without any truncation.
+"""
+        
+        # Call Gemini API with multiple retries and different models
+        gemini_models = [
+            "gemini-2.0-flash",
+            "gemini-1.5-pro",
+            "gemini-1.5-flash"
+        ]
+        
+        ai_success = False
+        generated_text = ""
+        
+        for model in gemini_models:
+            try:
+                print(f"Trying Gemini model for learning assistant: {model}")
+                
+                headers = {
+                    "Content-Type": "application/json",
+                }
+                
+                data = {
+                    "contents": [{
+                        "parts": [{
+                            "text": prompt
+                        }]
+                    }],
+                    "generationConfig": {
+                        "temperature": 0.7,  # Slightly higher for more creative responses
+                        "maxOutputTokens": 8192,  # Increased to prevent truncation
+                    }
+                }
+                
+                response = requests.post(
+                    f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}",
+                    headers=headers,
+                    json=data,
+                    timeout=30
+                )
+                
+                if response.status_code == 200:
+                    response_data = response.json()
+                    if "candidates" in response_data and len(response_data["candidates"]) > 0:
+                        candidate = response_data["candidates"][0]
+                        if "content" in candidate and "parts" in candidate["content"]:
+                            parts = candidate["content"]["parts"]
+                            if len(parts) > 0 and "text" in parts[0]:
+                                generated_text = parts[0]["text"].strip()
+                                ai_success = True
+                                print(f"Success with {model}")
+                                break
+                
+                if not ai_success:
+                    print(f"AI service error for {model}: {response.status_code} - {response.text}")
+                    
+            except Exception as e:
+                print(f"Error with {model}: {e}")
+                continue
+        
+        if ai_success:
+            # Extract related concepts from the response
+            related_concepts = []
+            try:
+                # Simple keyword extraction for related concepts
+                common_learning_terms = [
+                    "memory", "focus", "study", "learn", "understand", "practice",
+                    "technique", "method", "strategy", "approach", "concept", "topic",
+                    "subject", "skill", "knowledge", "education", "training"
+                ]
+                
+                response_lower = generated_text.lower()
+                for term in common_learning_terms:
+                    if term in response_lower:
+                        related_concepts.append(term.title())
+                
+                # Limit to 3-5 related concepts
+                related_concepts = list(set(related_concepts))[:5]
+            except:
+                related_concepts = []
+            
+            return JSONResponse(content={
+                "response": generated_text,
+                "relatedConcepts": related_concepts
+            })
+        else:
+            print("All AI models failed, using fallback response")
+            # Generate fallback response
+            fallback_response = generate_fallback_learning_response(message, current_topic)
+            return JSONResponse(content={
+                "response": fallback_response,
+                "relatedConcepts": ["Learning", "Study", "Education"]
+            })
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error during learning assistant: {e}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Learning assistant failed: {str(e)}")
+
+def generate_fallback_learning_response(message: str, current_topic: str = "") -> str:
+    """Generate a fallback response when AI fails."""
+    message_lower = message.lower()
+    
+    if "study" in message_lower or "learn" in message_lower:
+        return "Great question! Effective studying involves active engagement with the material. Try techniques like spaced repetition, practice testing, and explaining concepts to others. What specific subject are you trying to learn?"
+    
+    if "memory" in message_lower or "remember" in message_lower:
+        return "Memory techniques can significantly improve learning! Some effective methods include: creating associations, using mnemonic devices, practicing retrieval, and connecting new information to what you already know. Which technique would you like to explore?"
+    
+    if "focus" in message_lower or "concentration" in message_lower:
+        return "Maintaining focus is crucial for effective learning. Try techniques like the Pomodoro method (25-minute focused sessions), eliminating distractions, and taking regular breaks. What's your current study environment like?"
+    
+    if "difficult" in message_lower or "hard" in message_lower:
+        return "Learning difficult concepts takes time and patience. Break them down into smaller parts, use analogies and examples, and don't be afraid to ask questions. What specific concept are you finding challenging?"
+    
+    if current_topic:
+        return f"That's an interesting question about {current_topic}! I'd love to help you explore this topic further. Could you provide more details about what you'd like to learn or understand?"
+    
+    return "That's an interesting question! I'd love to help you explore this topic further. Could you provide more details about what you'd like to learn or understand?"
+
 def create_fallback_questions(content: str, count: int):
     """Create fallback questions based on document content."""
     questions = []
